@@ -76,7 +76,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <p>Here we focus on the syntax for implementation of NARFCS using <code>mice</code>, specifically through dedicated imputation methods. At the moment, methods are available for continuous and binary variables only. These are called <code>normSens</code> and <code>logregSens</code> but require additional arguments to be passed on to <code>mice</code>, as described below.</p>
 <div id="loading-and-looking-at-example-dataset" class="section level2">
 <h2>Loading and looking at example dataset</h2>
-<p>To illustrate, we use a simulated dataset <code>datmis</code> (available for download <a href="https://rawgit.com/moreno-betancur/mice/master/vignettes/NARFCS/datmis.csv">here</a>) with one binary variable <span class="math inline">\(X\)</span> and a continuous variable <span class="math inline">\(Y\)</span>, both having missing data, and <span class="math inline">\(M_x\)</span> and <span class="math inline">\(M_y\)</span> being the corresponding missingness indicators (i.e. equal to 1 if variable is missing and 0 otherwise).</p>
+<p>To illustrate, we use a simulated dataset <code>datmis</code> (available for download <a href="https://rawgit.com/moreno-betancur/NARFCS/master/datmis.csv">here</a>) with one binary variable <span class="math inline">\(X\)</span> and a continuous variable <span class="math inline">\(Y\)</span>, both having missing data, and <span class="math inline">\(M_x\)</span> and <span class="math inline">\(M_y\)</span> being the corresponding missingness indicators (i.e. equal to 1 if variable is missing and 0 otherwise).</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">datmis&lt;-<span class="kw">read.csv</span>(<span class="st">&quot;datmis.csv&quot;</span>)
 <span class="kw">head</span>(datmis)</code></pre></div>
 <pre><code>##    X          Y Mx My
@@ -234,7 +234,7 @@ impNARFCS&lt;-<span class="kw">mice</span>(datmis,<span class="dt">m=</span><spa
 <p>Moreno-Betancur M, Rey G, Latouche A. Direct likelihood inference and sensitivity analysis for competing risks regression with missing causes of failure. <em>Biometrics</em> 2015; 71(2):498-507.</p>
 <div id="cite-this-document-as" class="section level4">
 <h4>Cite this document as:</h4>
-<p>Moreno-Betancur M, Leacy FP, Tompsett D, White I. “mice: The NARFCS procedure for sensitivity analyses” (Available at: <a href="https://rawgit.com/moreno-betancur/mice/master/vignettes/NARFCS/NARFCS.html" class="uri">https://rawgit.com/moreno-betancur/mice/master/vignettes/NARFCS/NARFCS.html</a>)</p>
+<p>Moreno-Betancur M, Leacy FP, Tompsett D, White I. “mice: The NARFCS procedure for sensitivity analyses” (Available at: <a href="https://rawgit.com/moreno-betancur/NARFCS/master/README.html" class="uri">https://rawgit.com/moreno-betancur/NARFCS/master/README.html</a>)</p>
 </div>
 </div>
 

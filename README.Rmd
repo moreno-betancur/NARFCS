@@ -15,7 +15,7 @@ Here we illustrate how to perform sensitivity analyses using the Not At Random F
 Here we focus on the syntax for implementation of NARFCS using `mice`, specifically through dedicated imputation methods. At the moment, methods are available for continuous and binary variables only. These are called `normSens` and `logregSens` but require additional arguments to be passed on to `mice`, as described below.
 
 ## Loading and looking at example dataset
-To illustrate, we use a simulated dataset `datmis` (available for download [here](https://rawgit.com/moreno-betancur/mice/master/vignettes/NARFCS/datmis.csv)) with one binary variable $X$ and a continuous variable $Y$, both having missing data, and $M_x$ and $M_y$ being the corresponding missingness indicators (i.e. equal to 1 if variable is missing and 0 otherwise).
+To illustrate, we use a simulated dataset `datmis` (available for download [here](https://rawgit.com/moreno-betancur/NARFCS/master/datmis.csv)) with one binary variable $X$ and a continuous variable $Y$, both having missing data, and $M_x$ and $M_y$ being the corresponding missingness indicators (i.e. equal to 1 if variable is missing and 0 otherwise).
 
 ```{r}
 datmis<-read.csv("datmis.csv")
@@ -186,4 +186,4 @@ Moreno-Betancur M, Rey G, Latouche A. Direct likelihood inference and sensitivit
 
 #### Cite this document as:
 
-Moreno-Betancur M, Leacy FP, Tompsett D, White I. "mice: The NARFCS procedure for sensitivity analyses" (Available at: https://rawgit.com/moreno-betancur/mice/master/vignettes/NARFCS/NARFCS.html)
+Moreno-Betancur M, Leacy FP, Tompsett D, White I. "mice: The NARFCS procedure for sensitivity analyses" (Available at: https://rawgit.com/moreno-betancur/NARFCS/master/README.html)
