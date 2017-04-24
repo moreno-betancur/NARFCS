@@ -1,5 +1,14 @@
-# `mice`: The NARFCS procedure for sensitivity analyses
-M. Moreno-Betancur, F. Leacy, D. Tompsett, I. White  
+---
+title: "`mice`: The NARFCS procedure for sensitivity analyses"
+author: "M. Moreno-Betancur, F. Leacy, D. Tompsett, I. White"
+output: 
+  rmarkdown::html_vignette:
+    keep_md: true
+vignette: >
+  %\VignetteIndexEntry{"NARFCS"}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
 
 Here we illustrate how to perform sensitivity analyses using the Not At Random Fully Conditional Specification (NARFCS) procedure with the package `mice`. This procedure was first studied by Leacy (2016), and Daniel et al. (in preparation) provide further recommendations about its application in practice. 
 
@@ -8,46 +17,23 @@ Here we focus on the syntax for implementation of NARFCS using `mice`, specifica
 ## Loading and looking at example dataset
 To illustrate, we use a simulated dataset `datmis` (available for download [here](https://rawgit.com/moreno-betancur/mice/master/vignettes/NARFCS/datmis.csv)) with one binary variable $X$ and a continuous variable $Y$, both having missing data, and $M_x$ and $M_y$ being the corresponding missingness indicators (i.e. equal to 1 if variable is missing and 0 otherwise).
 
-
-```r
+```{r}
 datmis<-read.csv("datmis.csv")
 head(datmis)
 ```
 
-```
-##    X          Y Mx My
-## 1  0   3.693582  0  0
-## 2  0 -12.398012  0  0
-## 3  0 -17.878958  0  0
-## 4  0 -19.245551  0  0
-## 5 NA         NA  1  1
-## 6  0   9.126956  0  0
-```
-
 Let's look at the percentage of missing values in $X$ and $Y$, and the percentage of incomplete cases: 
-
-```r
-100 * c(mean(datmis$Mx), mean(datmis$My))
-```
-
-```
-## [1] 19.0 21.6
-```
-
-```r
-100 * c(mean(datmis$Mx == 1 | datmis$My == 1))
-```
-
-```
-## [1] 29.4
+```{r tidy=T}
+100*c(mean(datmis$Mx), mean(datmis$My))
+100*c(mean(datmis$Mx==1|datmis$My==1))
 ```
 
 Assume that the aim is to estimate the coefficient of $X$ in a linear regression of $Y$ on $X$. Before illustrating NARFCS, we provide a recap of a standard FCS analysis one may do in this case. This will be the point of departure for the NARFCS sensitivity analysis and will also help to draw some parallels between the arguments provided to `mice` in the FCS analysis and those additional ones required for NARFCS.
 
 We first need to turn X into a factor for `mice` to recognise this a binary variable:
-
-```r
+```{r}
 datmis$X<-as.factor(datmis$X)
+
 ```
 
 ## FCS analysis
@@ -63,8 +49,7 @@ The FCS analysis with `mice` can be done by specifying the linear predictor of e
 
 #### Matrix syntax
 With matrix syntax, the analysis is perfomed as follows:
-
-```r
+```{r}
 library(mice)
 
 #Set-up predictor matrix
@@ -73,17 +58,7 @@ predMatrix[1,]<-c(0,1,0,0)
 predMatrix[2,]<-c(1,0,0,0)
 
 predMatrix
-```
 
-```
-##      [,1] [,2] [,3] [,4]
-## [1,]    0    1    0    0
-## [2,]    1    0    0    0
-## [3,]    0    0    0    0
-## [4,]    0    0    0    0
-```
-
-```r
 #FCS analysis with matrix syntax
 impFCS<-mice(datmis,m=5, method=c("logreg","norm","",""), predictorMatrix=predMatrix,seed=234235,print=F)
 
@@ -91,26 +66,15 @@ impFCS<-mice(datmis,m=5, method=c("logreg","norm","",""), predictorMatrix=predMa
 pool(with(impFCS,lm(Y~X)))$qbar
 ```
 
-```
-## (Intercept)          X2 
-##   -1.270058   13.169915
-```
-
 #### Formula syntax
 
 The formula syntax is sometimes more straightforward, especially when it comes to interactions (though for now we have none - see further below):
-
-```r
+```{r}
 #FCS analysis using formula syntax
 impFCS<-mice(datmis,m=5, method=c("logreg","norm","",""), form=c("~1+Y","~1+X","",""),seed=234235,print=F)
 
 #Pool results from linear regression from imputed datasets:
 pool(with(impFCS,lm(Y~X)))$qbar
-```
-
-```
-## (Intercept)          X2 
-##   -1.270058   13.169915
 ```
 
 At a given MICE iteration, the $\beta$-parameters are estimated from the observed and current imputed values of all variables, but ultimately depend on the expectations and associations of the variables in the observed data. One can thus ask what would happen if some aspects of the distribution of the missing data differed from that of the observed data. Answering this question is the aim of a sensitvity analysis which we will perform using the NARFCS procedure.
@@ -155,42 +119,21 @@ with each assigned its own sensitivity parameter value.
 #### Matrix syntax
 Using the matrix syntax, the NARFCS procedure with the above models and choice of parameters is done as follows:
 
-
-```r
+```{r}
 #Set-up predictor matrix for identifiable part as before:
 predMatrix<-matrix(rep(0,16),ncol=4)
 predMatrix[1,]<-c(0,1,0,0)
 predMatrix[2,]<-c(1,0,0,0)
 
 predMatrix
-```
 
-```
-##      [,1] [,2] [,3] [,4]
-## [1,]    0    1    0    0
-## [2,]    1    0    0    0
-## [3,]    0    0    0    0
-## [4,]    0    0    0    0
-```
-
-```r
 #Set-up predictor matrix for unidentifiable part:
 predSens<-matrix(rep(0,16),ncol=4)
 predSens[1,]<-c(0,0,0,0)
 predSens[2,]<-c(1,0,0,0)
 
 predSens
-```
 
-```
-##      [,1] [,2] [,3] [,4]
-## [1,]    0    0    0    0
-## [2,]    1    0    0    0
-## [3,]    0    0    0    0
-## [4,]    0    0    0    0
-```
-
-```r
 # NARFCS analysis using matrix syntax
 impNARFCS<-mice(datmis,m=5, method=c("logregSens","normSens","",""), predictorMatrix=predMatrix,
                  predictorSens=predSens, parmSens=list(c(-4),c(2,5)), seed=234235,print=F)
@@ -199,46 +142,26 @@ impNARFCS<-mice(datmis,m=5, method=c("logregSens","normSens","",""), predictorMa
 pool(with(impNARFCS,lm(Y~X)))$qbar
 ```
 
-```
-## (Intercept)          X2 
-##   0.7805584  10.8163702
-```
-
 Note that no predictors have been specified for $X$ in this part of the imputation model. Hence,
 only an intercept shift will be included. If the user wants to exclude this intercept shift
 (i.e. exclude the unidentifiable part of the model altogether), then it suffices to set the corresponding sensitivity parameter to zero.
 
 If we extract the predictor matrix used for the unidentifiable part from the object returned by `mice`, we see the names of the colums are preceded by a colon (":").
 
-
-```r
+```{r}
 impNARFCS$predictorSens
-```
-
-```
-##    :X :Y :Mx :My
-## X   0  0   0   0
-## Y   1  0   0   0
-## Mx  0  0   0   0
-## My  0  0   0   0
 ```
 These names highlight that, contrary to the terms in `predictorMatrix`, the terms in `predictorSens` formally come into the model only as an interaction with the missingness indicator (i.e. only for the missing data) as described above.
 
 #### Formula syntax
 With the formula syntax, the analysis is performed as follows:
-
-```r
+```{r}
 # NARFCS analysis using formula syntax
 impNARFCS<-mice(datmis,m=5, method=c("logregSens","normSens","",""),  form=c("~1+Y","~1+X","",""),
                   formSens=c("~1","~1+X","",""), parmSens=list(c(-4),c(2,5)), seed=234235,print=F)
 
 #Pool results from linear regression from imputed datasets:
 pool(with(impNARFCS,lm(Y~X)))$qbar
-```
-
-```
-## (Intercept)          X2 
-##   0.7805584  10.8163702
 ```
 
 #### A note on interactions
