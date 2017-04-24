@@ -1,6 +1,8 @@
 # `mice`: The NARFCS procedure for sensitivity analyses
 M. Moreno-Betancur, F. Leacy, D. Tompsett, I. White  
 
+([click here if you don't see the Latex formulas in this document properly](https://rawgit.com/moreno-betancur/NARFCS/master/README.html))
+
 Here we illustrate how to perform sensitivity analyses using the Not At Random Fully Conditional Specification (NARFCS) procedure with the package `mice`. This procedure was first studied by Leacy (2016), and Daniel et al. (in preparation) provide further recommendations about its application in practice. 
 
 Here we focus on the syntax for implementation of NARFCS using `mice`, specifically through dedicated imputation methods. At the moment, methods are available for continuous and binary variables only. These are called `normSens` and `logregSens` but require additional arguments to be passed on to `mice`, as described below.
