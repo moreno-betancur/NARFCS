@@ -10,13 +10,40 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-([click here if you don't see the Latex formulas in this document properly](https://rawgit.com/moreno-betancur/NARFCS/master/README.html))
+This document illustrates how to perform sensitivity analyses using the Not At Random Fully Conditional Specification (NARFCS) procedure implemented in an extension of the package `mice` ([van Buuren S, Groothuis-Oudshoorn K., 2011](https://www.jstatsoft.org/article/view/v045i03/v45i03.pdf)). 
 
-Here we illustrate how to perform sensitivity analyses using the Not At Random Fully Conditional Specification (NARFCS) procedure with the package `mice`. This procedure was first studied by Leacy (2016), and Daniel et al. (in preparation) provide further recommendations about its application in practice. 
+## Background
 
-Here we focus on the syntax for implementation of NARFCS using `mice`, specifically through dedicated imputation methods. At the moment, methods are available for continuous and binary variables only. These are called `normSens` and `logregSens` but require additional arguments to be passed on to `mice`, as described below.
+Standard multiple imputation procedures to deal with missing data, such as the Fully Conditional Specification (FCS) approach implemented in the package `mice`, rely on the marginal and conditional distributions of variables in the observed data to impute the missing values. 
+
+A *sensitivity analysis* in this setting aims at assessing how our results would change if the distribution of the missing data differed in a systematic way from that of the observed data. 
+
+The NARFCS procedure was first studied by Leacy (2016), and is a generalisation of the so-called *delta-adjustment* sensitivity analysis method to the case with multiple incomplete variables. 
+Specifically, the NARFCS procedure shifts the imputations drawn at each iteration of `mice` by a user-specified quantity that can vary across subjects, to reflect systematic departures of the missing data from the observed data distribution.
+
+Tompsett et al. (in preparation) provide recommendations about the application of NARFCS in practice. 
+Here we focus on the syntax for applying NARFCS to a dataset using an extension of the package `mice` that includes dedicated imputation methods. At the moment, methods are available for continuous and binary variables only. These are called `normSens` and `logregSens` but require additional arguments to be passed on to `mice`, as described below.
+
+## Installation of the extension
+
+The most up-to-date NARFCS extension of the package `mice` ([van Buuren S, Groothuis-Oudshoorn K., 2011](https://www.jstatsoft.org/article/view/v045i03/v45i03.pdf)) can be installed directly from GitHub using the `devtools` package. To do this you should first check you have devtools installed by executing the following commands from within your R session:
+
+```r
+if (!require(devtools)) {
+  install.packages("devtools")
+}
+```
+
+Then execute the following commands to install the NARFCS extension of `mice`:
+
+```r
+library(devtools)
+install_github("moreno-betancur/mice")
+```
 
 ## Loading and looking at example dataset
+([click here if you see raw rather than compiled Latex formulas below](https://rawgit.com/moreno-betancur/NARFCS/master/README.html))
+
 To illustrate, we use a simulated dataset `datmis` (available for download [here](https://rawgit.com/moreno-betancur/NARFCS/master/datmis.csv)) with one binary variable $X$ and a continuous variable $Y$, both having missing data, and $M_x$ and $M_y$ being the corresponding missingness indicators (i.e. equal to 1 if variable is missing and 0 otherwise).
 
 ```{r}
@@ -32,7 +59,7 @@ Let's look at the percentage of missing values in $X$ and $Y$, and the percentag
 
 Assume that the aim is to estimate the coefficient of $X$ in a linear regression of $Y$ on $X$. Before illustrating NARFCS, we provide a recap of a standard FCS analysis one may do in this case. This will be the point of departure for the NARFCS sensitivity analysis and will also help to draw some parallels between the arguments provided to `mice` in the FCS analysis and those additional ones required for NARFCS.
 
-We first need to turn X into a factor for `mice` to recognise this a binary variable:
+We first need to turn X into a factor for `mice` to recognise this as a binary variable:
 ```{r}
 datmis$X<-as.factor(datmis$X)
 
@@ -49,7 +76,7 @@ $$ E(Y|X,M_x,M_y)=\beta_{Y0}+ \beta_{YX} X.$$
 ### Running it with mice
 The FCS analysis with `mice` can be done by specifying the linear predictor of each of these models in either of two ways: using the matrix syntax (through the `predictorMatrix` argument) or using the formula syntax (through the `form` argument). 
 
-#### Matrix syntax
+#### Matrix syntax for FCS
 With matrix syntax, the analysis is perfomed as follows:
 ```{r}
 library(mice)
@@ -68,7 +95,7 @@ impFCS<-mice(datmis,m=5, method=c("logreg","norm","",""), predictorMatrix=predMa
 pool(with(impFCS,lm(Y~X)))$qbar
 ```
 
-#### Formula syntax
+#### Formula syntax for FCS
 
 The formula syntax is sometimes more straightforward, especially when it comes to interactions (though for now we have none - see further below):
 ```{r}
@@ -79,12 +106,12 @@ impFCS<-mice(datmis,m=5, method=c("logreg","norm","",""), form=c("~1+Y","~1+X","
 pool(with(impFCS,lm(Y~X)))$qbar
 ```
 
-At a given MICE iteration, the $\beta$-parameters are estimated from the observed and current imputed values of all variables, but ultimately depend on the expectations and associations of the variables in the observed data. One can thus ask what would happen if some aspects of the distribution of the missing data differed from that of the observed data. Answering this question is the aim of a sensitvity analysis which we will perform using the NARFCS procedure.
+At a given MICE iteration, the $\beta$-parameters are estimated from the observed and current imputed values of all variables, but ultimately depend on the expectations and associations of the variables in the observed data. One can thus ask what would happen if some aspects of the distribution of the missing data differed from what can be inferred from the observed data. Answering this question is the aim of a sensitvity analysis which we will perform using the NARFCS procedure.
 
 ## NARFCS analysis to assess sensitivity
 
 ### NARFCS univariate imputation models
-NARFCS (Leacy 2016) is a generalisation to the case with multiple incomplete variables of the so-called *delta-adjustment* method. We have previously used this approach to perform sensitivity analyses when there is a single univariate imputation model, both for continuous (Moreno-Betancur and Chavance, 2016) and binary (Leacy et al. 2017; Moreno-Betancur et al. 2015) variables, and various other examples exist in the literature.
+NARFCS (Leacy 2016) is a generalisation to the case with multiple incomplete variables of the so-called *delta-adjustment* method for sensitivity analyses. In the case of one incomplete variable, we have previously used the method both for continuous ([Moreno-Betancur and Chavance, 2016](http://journals.sagepub.com/doi/abs/10.1177/0962280213490014)) and binary ([Leacy et al. 2017](https://academic.oup.com/aje/article-lookup/doi/10.1093/aje/kww107); [Moreno-Betancur et al. 2015](http://onlinelibrary.wiley.com/doi/10.1111/biom.12295/full)) variables, and various other examples exist in the literature.
 
 A senstivity analysis using the NARFCS procedure aims at shifting the imputations drawn at each iteration by a quantity determined by a linear combination of the variables already included in the imputation model. Since only the imputed values are shifted, and not the observed, this shift only concerns individuals with the corresponding value missing (i.e. with $M_x=1$ if $X$ is being imputed and $M_y=1$ if $Y$ is being imputed). Formally, this comes to specifying a univariate imputation model with an additional term representing an interaction between the missingness indicator and the chosen linear combination for the shift. In our example, this could be as follows:
 
@@ -118,7 +145,7 @@ with each assigned its own sensitivity parameter value.
 
 3. The imputation methods for the variables that have sensitivity paramters (in this case both $X$ and $Y$) are no longer `"norm"` and `"logreg"` but rather `"normSens"` and `"logregSens"`. No other imputation methods have been extended for NARFCS at the moment.
 
-#### Matrix syntax
+#### Matrix syntax for NARFCS
 Using the matrix syntax, the NARFCS procedure with the above models and choice of parameters is done as follows:
 
 ```{r}
@@ -155,7 +182,7 @@ impNARFCS$predictorSens
 ```
 These names highlight that, contrary to the terms in `predictorMatrix`, the terms in `predictorSens` formally come into the model only as an interaction with the missingness indicator (i.e. only for the missing data) as described above.
 
-#### Formula syntax
+#### Formula syntax for NARFCS
 With the formula syntax, the analysis is performed as follows:
 ```{r}
 # NARFCS analysis using formula syntax
@@ -179,12 +206,13 @@ specification 2016 (PhD thesis).
 Tompsett D, Leacy FP, Moreno-Betancur M, White IR. On the use of the not at random fully conditional
 specification procedure (NARFCS) in practice (in preparation).
 
-Moreno-Betancur M, Chavance M. Sensitivity analysis of incomplete longitudinal data departing from the missing at random assumption: Methodology and application in a clinical trial with drop-outs. *Statistical Methods in Medical Research* 2016; 25(4) 1471–1489.
+[van Buuren S, Groothuis-Oudshoorn K.](https://www.jstatsoft.org/article/view/v045i03/v45i03.pdf) mice: Multivariate Imputation by Chained Equations in R. *Journal of Statistical Software* 2011; 45(3), 1-67.
 
-Leacy FP, Floyd S, Yates TA, White IR. Analyses of Sensitivity to the Missing-at-Random Assumption Using Multiple Imputation With Delta Adjustment: Application to a Tuberculosis/HIV Prevalence
-Survey With Incomplete HIV-Status Data. *American Journal of Epidemiology*, 185(4):304-315.
+[Moreno-Betancur M, Chavance M.](http://journals.sagepub.com/doi/abs/10.1177/0962280213490014) Sensitivity analysis of incomplete longitudinal data departing from the missing at random assumption: Methodology and application in a clinical trial with drop-outs. *Statistical Methods in Medical Research* 2016; 25(4) 1471-1489.
 
-Moreno-Betancur M, Rey G, Latouche A. Direct likelihood inference and sensitivity analysis for competing risks regression with missing causes of failure. *Biometrics* 2015; 71(2):498-507.
+[Leacy FP, Floyd S, Yates TA, White IR.](https://academic.oup.com/aje/article-lookup/doi/10.1093/aje/kww107) Analyses of Sensitivity to the Missing-at-Random Assumption Using Multiple Imputation With Delta Adjustment: Application to a Tuberculosis/HIV Prevalence Survey With Incomplete HIV-Status Data. *American Journal of Epidemiology*, 185(4):304-315.
+
+[Moreno-Betancur M, Rey G, Latouche A.](http://onlinelibrary.wiley.com/doi/10.1111/biom.12295/full) Direct likelihood inference and sensitivity analysis for competing risks regression with missing causes of failure. *Biometrics* 2015; 71(2):498-507.
 
 #### Cite this document as:
 

@@ -72,11 +72,27 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 
 
 
-<p>(<a href="https://rawgit.com/moreno-betancur/NARFCS/master/README.html">click here if you don’t see the Latex formulas in this document properly</a>)</p>
-<p>Here we illustrate how to perform sensitivity analyses using the Not At Random Fully Conditional Specification (NARFCS) procedure with the package <code>mice</code>. This procedure was first studied by Leacy (2016), and Daniel et al. (in preparation) provide further recommendations about its application in practice.</p>
-<p>Here we focus on the syntax for implementation of NARFCS using <code>mice</code>, specifically through dedicated imputation methods. At the moment, methods are available for continuous and binary variables only. These are called <code>normSens</code> and <code>logregSens</code> but require additional arguments to be passed on to <code>mice</code>, as described below.</p>
+<p>This document illustrates how to perform sensitivity analyses using the Not At Random Fully Conditional Specification (NARFCS) procedure implemented in an extension of the package <code>mice</code> (<a href="https://www.jstatsoft.org/article/view/v045i03/v45i03.pdf">van Buuren S, Groothuis-Oudshoorn K., 2011</a>).</p>
+<div id="background" class="section level2">
+<h2>Background</h2>
+<p>Standard multiple imputation procedures to deal with missing data, such as the Fully Conditional Specification (FCS) approach implemented in the package <code>mice</code>, rely on the marginal and conditional distributions of variables in the observed data to impute the missing values.</p>
+<p>A <em>sensitivity analysis</em> in this setting aims at assessing how our results would change if the distribution of the missing data differed in a systematic way from that of the observed data.</p>
+<p>The NARFCS procedure was first studied by Leacy (2016), and is a generalisation of the so-called <em>delta-adjustment</em> sensitivity analysis method to the case with multiple incomplete variables. Specifically, the NARFCS procedure shifts the imputations drawn at each iteration of <code>mice</code> by a user-specified quantity that can vary across subjects, to reflect systematic departures of the missing data from the observed data distribution.</p>
+<p>Tompsett et al. (in preparation) provide recommendations about the application of NARFCS in practice. Here we focus on the syntax for applying NARFCS to a dataset using an extension of the package <code>mice</code> that includes dedicated imputation methods. At the moment, methods are available for continuous and binary variables only. These are called <code>normSens</code> and <code>logregSens</code> but require additional arguments to be passed on to <code>mice</code>, as described below.</p>
+</div>
+<div id="installation-of-the-extension" class="section level2">
+<h2>Installation of the extension</h2>
+<p>The most up-to-date NARFCS extension of the package <code>mice</code> (<a href="https://www.jstatsoft.org/article/view/v045i03/v45i03.pdf">van Buuren S, Groothuis-Oudshoorn K., 2011</a>) can be installed directly from GitHub using the <code>devtools</code> package. To do this you should first check you have devtools installed by executing the following commands from within your R session:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">if (!<span class="kw">require</span>(devtools)) {
+  <span class="kw">install.packages</span>(<span class="st">&quot;devtools&quot;</span>)
+}</code></pre></div>
+<p>Then execute the following commands to install the NARFCS extension of <code>mice</code>:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(devtools)
+<span class="kw">install_github</span>(<span class="st">&quot;moreno-betancur/mice&quot;</span>)</code></pre></div>
+</div>
 <div id="loading-and-looking-at-example-dataset" class="section level2">
 <h2>Loading and looking at example dataset</h2>
+<p>(<a href="https://rawgit.com/moreno-betancur/NARFCS/master/README.html">click here if you see raw rather than compiled Latex formulas below</a>)</p>
 <p>To illustrate, we use a simulated dataset <code>datmis</code> (available for download <a href="https://rawgit.com/moreno-betancur/NARFCS/master/datmis.csv">here</a>) with one binary variable <span class="math inline">\(X\)</span> and a continuous variable <span class="math inline">\(Y\)</span>, both having missing data, and <span class="math inline">\(M_x\)</span> and <span class="math inline">\(M_y\)</span> being the corresponding missingness indicators (i.e. equal to 1 if variable is missing and 0 otherwise).</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">datmis&lt;-<span class="kw">read.csv</span>(<span class="st">&quot;datmis.csv&quot;</span>)
 <span class="kw">head</span>(datmis)</code></pre></div>
@@ -93,7 +109,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="dv">100</span> *<span class="st"> </span><span class="kw">c</span>(<span class="kw">mean</span>(datmis$Mx ==<span class="st"> </span><span class="dv">1</span> |<span class="st"> </span>datmis$My ==<span class="st"> </span><span class="dv">1</span>))</code></pre></div>
 <pre><code>## [1] 29.4</code></pre>
 <p>Assume that the aim is to estimate the coefficient of <span class="math inline">\(X\)</span> in a linear regression of <span class="math inline">\(Y\)</span> on <span class="math inline">\(X\)</span>. Before illustrating NARFCS, we provide a recap of a standard FCS analysis one may do in this case. This will be the point of departure for the NARFCS sensitivity analysis and will also help to draw some parallels between the arguments provided to <code>mice</code> in the FCS analysis and those additional ones required for NARFCS.</p>
-<p>We first need to turn X into a factor for <code>mice</code> to recognise this a binary variable:</p>
+<p>We first need to turn X into a factor for <code>mice</code> to recognise this as a binary variable:</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">datmis$X&lt;-<span class="kw">as.factor</span>(datmis$X)</code></pre></div>
 </div>
 <div id="fcs-analysis" class="section level2">
@@ -105,8 +121,8 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <div id="running-it-with-mice" class="section level3">
 <h3>Running it with mice</h3>
 <p>The FCS analysis with <code>mice</code> can be done by specifying the linear predictor of each of these models in either of two ways: using the matrix syntax (through the <code>predictorMatrix</code> argument) or using the formula syntax (through the <code>form</code> argument).</p>
-<div id="matrix-syntax" class="section level4">
-<h4>Matrix syntax</h4>
+<div id="matrix-syntax-for-fcs" class="section level4">
+<h4>Matrix syntax for FCS</h4>
 <p>With matrix syntax, the analysis is perfomed as follows:</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(mice)
 
@@ -129,8 +145,8 @@ impFCS&lt;-<span class="kw">mice</span>(datmis,<span class="dt">m=</span><span c
 <pre><code>## (Intercept)          X2 
 ##   -1.270058   13.169915</code></pre>
 </div>
-<div id="formula-syntax" class="section level4">
-<h4>Formula syntax</h4>
+<div id="formula-syntax-for-fcs" class="section level4">
+<h4>Formula syntax for FCS</h4>
 <p>The formula syntax is sometimes more straightforward, especially when it comes to interactions (though for now we have none - see further below):</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co">#FCS analysis using formula syntax</span>
 impFCS&lt;-<span class="kw">mice</span>(datmis,<span class="dt">m=</span><span class="dv">5</span>, <span class="dt">method=</span><span class="kw">c</span>(<span class="st">&quot;logreg&quot;</span>,<span class="st">&quot;norm&quot;</span>,<span class="st">&quot;&quot;</span>,<span class="st">&quot;&quot;</span>), <span class="dt">form=</span><span class="kw">c</span>(<span class="st">&quot;~1+Y&quot;</span>,<span class="st">&quot;~1+X&quot;</span>,<span class="st">&quot;&quot;</span>,<span class="st">&quot;&quot;</span>),<span class="dt">seed=</span><span class="dv">234235</span>,<span class="dt">print=</span>F)
@@ -139,7 +155,7 @@ impFCS&lt;-<span class="kw">mice</span>(datmis,<span class="dt">m=</span><span c
 <span class="kw">pool</span>(<span class="kw">with</span>(impFCS,<span class="kw">lm</span>(Y~X)))$qbar</code></pre></div>
 <pre><code>## (Intercept)          X2 
 ##   -1.270058   13.169915</code></pre>
-<p>At a given MICE iteration, the <span class="math inline">\(\beta\)</span>-parameters are estimated from the observed and current imputed values of all variables, but ultimately depend on the expectations and associations of the variables in the observed data. One can thus ask what would happen if some aspects of the distribution of the missing data differed from that of the observed data. Answering this question is the aim of a sensitvity analysis which we will perform using the NARFCS procedure.</p>
+<p>At a given MICE iteration, the <span class="math inline">\(\beta\)</span>-parameters are estimated from the observed and current imputed values of all variables, but ultimately depend on the expectations and associations of the variables in the observed data. One can thus ask what would happen if some aspects of the distribution of the missing data differed from what can be inferred from the observed data. Answering this question is the aim of a sensitvity analysis which we will perform using the NARFCS procedure.</p>
 </div>
 </div>
 </div>
@@ -147,7 +163,7 @@ impFCS&lt;-<span class="kw">mice</span>(datmis,<span class="dt">m=</span><span c
 <h2>NARFCS analysis to assess sensitivity</h2>
 <div id="narfcs-univariate-imputation-models" class="section level3">
 <h3>NARFCS univariate imputation models</h3>
-<p>NARFCS (Leacy 2016) is a generalisation to the case with multiple incomplete variables of the so-called <em>delta-adjustment</em> method. We have previously used this approach to perform sensitivity analyses when there is a single univariate imputation model, both for continuous (Moreno-Betancur and Chavance, 2016) and binary (Leacy et al. 2017; Moreno-Betancur et al. 2015) variables, and various other examples exist in the literature.</p>
+<p>NARFCS (Leacy 2016) is a generalisation to the case with multiple incomplete variables of the so-called <em>delta-adjustment</em> method for sensitivity analyses. In the case of one incomplete variable, we have previously used the method both for continuous (<a href="http://journals.sagepub.com/doi/abs/10.1177/0962280213490014">Moreno-Betancur and Chavance, 2016</a>) and binary (<a href="https://academic.oup.com/aje/article-lookup/doi/10.1093/aje/kww107">Leacy et al. 2017</a>; <a href="http://onlinelibrary.wiley.com/doi/10.1111/biom.12295/full">Moreno-Betancur et al. 2015</a>) variables, and various other examples exist in the literature.</p>
 <p>A senstivity analysis using the NARFCS procedure aims at shifting the imputations drawn at each iteration by a quantity determined by a linear combination of the variables already included in the imputation model. Since only the imputed values are shifted, and not the observed, this shift only concerns individuals with the corresponding value missing (i.e. with <span class="math inline">\(M_x=1\)</span> if <span class="math inline">\(X\)</span> is being imputed and <span class="math inline">\(M_y=1\)</span> if <span class="math inline">\(Y\)</span> is being imputed). Formally, this comes to specifying a univariate imputation model with an additional term representing an interaction between the missingness indicator and the chosen linear combination for the shift. In our example, this could be as follows:</p>
 <p><span class="math display">\[ \text{logit}\{E(X|Y,M_y,M_x)\}=\underbrace{\beta_{X0}+ \beta_{XY} Y}_{\text{IDENTIFIABLE PART}} +\underbrace{M_x*(\delta_{X0}+\delta_{XY}Y)}_\text{UNIDENTIFIABLE PART}.\]</span> and <span class="math display">\[ E(Y|X,M_x,M_y)=\underbrace{\beta_{Y0}+ \beta_{YX} X}_{\text{IDENTIFIABLE PART}} +\underbrace{M_y*(\delta_{Y0}+\delta_{YX}X)}_\text{UNIDENTIFIABLE PART}.\]</span></p>
 <p>The <span class="math inline">\(\delta\)</span>-parameters that make up the linear combination in the shift are called <em>sensitvity parameters</em>. These values pertain to the way in which the distribution of the missing data departs from that of the observed data, and as such are not estimable from the observed data, that is, they are unidentifiable. Thus, the NARFCS model consists of an identfiable part, with <span class="math inline">\(\beta\)</span>-parameters estimated from observed data, and an unidentifiable part, with <span class="math inline">\(\delta\)</span>- (sensitivity) parameters.</p>
@@ -164,8 +180,8 @@ impFCS&lt;-<span class="kw">mice</span>(datmis,<span class="dt">m=</span><span c
 <li><p>The user needs to specify the values of the sensitivity parameters through the argument <code>parmSens</code>, by passing a list of vectors, with the jth entry being the vector of sensitivity parameters for the imputation model of the jth variable in the dataset. The size of the jth entry must match the number of predictors speficied for unidentified part of the imputation model of the jth variable through <code>predictorSens</code> or <code>formSens</code>, plus 1 (for the intercept). If one of the predictors is a categorical variable, say with <span class="math inline">\(K\)</span> categories, then only one sensitivity parameter value needs to be passed on for that predictor and this value is used for all <span class="math inline">\(K\)</span> categories, i.e. it is replicated <span class="math inline">\(K\)</span> times. If one wants a different value for each category, then one can always add the corresponding dummy variables to the dataset prior to calling <code>mice</code> and treat these as binary variables, with each assigned its own sensitivity parameter value.</p></li>
 <li><p>The imputation methods for the variables that have sensitivity paramters (in this case both <span class="math inline">\(X\)</span> and <span class="math inline">\(Y\)</span>) are no longer <code>&quot;norm&quot;</code> and <code>&quot;logreg&quot;</code> but rather <code>&quot;normSens&quot;</code> and <code>&quot;logregSens&quot;</code>. No other imputation methods have been extended for NARFCS at the moment.</p></li>
 </ol>
-<div id="matrix-syntax-1" class="section level4">
-<h4>Matrix syntax</h4>
+<div id="matrix-syntax-for-narfcs" class="section level4">
+<h4>Matrix syntax for NARFCS</h4>
 <p>Using the matrix syntax, the NARFCS procedure with the above models and choice of parameters is done as follows:</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co">#Set-up predictor matrix for identifiable part as before:</span>
 predMatrix&lt;-<span class="kw">matrix</span>(<span class="kw">rep</span>(<span class="dv">0</span>,<span class="dv">16</span>),<span class="dt">ncol=</span><span class="dv">4</span>)
@@ -207,8 +223,8 @@ impNARFCS&lt;-<span class="kw">mice</span>(datmis,<span class="dt">m=</span><spa
 ## My  0  0   0   0</code></pre>
 <p>These names highlight that, contrary to the terms in <code>predictorMatrix</code>, the terms in <code>predictorSens</code> formally come into the model only as an interaction with the missingness indicator (i.e. only for the missing data) as described above.</p>
 </div>
-<div id="formula-syntax-1" class="section level4">
-<h4>Formula syntax</h4>
+<div id="formula-syntax-for-narfcs" class="section level4">
+<h4>Formula syntax for NARFCS</h4>
 <p>With the formula syntax, the analysis is performed as follows:</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># NARFCS analysis using formula syntax</span>
 impNARFCS&lt;-<span class="kw">mice</span>(datmis,<span class="dt">m=</span><span class="dv">5</span>, <span class="dt">method=</span><span class="kw">c</span>(<span class="st">&quot;logregSens&quot;</span>,<span class="st">&quot;normSens&quot;</span>,<span class="st">&quot;&quot;</span>,<span class="st">&quot;&quot;</span>),  <span class="dt">form=</span><span class="kw">c</span>(<span class="st">&quot;~1+Y&quot;</span>,<span class="st">&quot;~1+X&quot;</span>,<span class="st">&quot;&quot;</span>,<span class="st">&quot;&quot;</span>),
@@ -230,9 +246,10 @@ impNARFCS&lt;-<span class="kw">mice</span>(datmis,<span class="dt">m=</span><spa
 <h2>References</h2>
 <p>Leacy FP. Multiple imputation under missing not at random assumptions via fully conditional specification 2016 (PhD thesis).</p>
 <p>Tompsett D, Leacy FP, Moreno-Betancur M, White IR. On the use of the not at random fully conditional specification procedure (NARFCS) in practice (in preparation).</p>
-<p>Moreno-Betancur M, Chavance M. Sensitivity analysis of incomplete longitudinal data departing from the missing at random assumption: Methodology and application in a clinical trial with drop-outs. <em>Statistical Methods in Medical Research</em> 2016; 25(4) 1471–1489.</p>
-<p>Leacy FP, Floyd S, Yates TA, White IR. Analyses of Sensitivity to the Missing-at-Random Assumption Using Multiple Imputation With Delta Adjustment: Application to a Tuberculosis/HIV Prevalence Survey With Incomplete HIV-Status Data. <em>American Journal of Epidemiology</em>, 185(4):304-315.</p>
-<p>Moreno-Betancur M, Rey G, Latouche A. Direct likelihood inference and sensitivity analysis for competing risks regression with missing causes of failure. <em>Biometrics</em> 2015; 71(2):498-507.</p>
+<p><a href="https://www.jstatsoft.org/article/view/v045i03/v45i03.pdf">van Buuren S, Groothuis-Oudshoorn K.</a> mice: Multivariate Imputation by Chained Equations in R. <em>Journal of Statistical Software</em> 2011; 45(3), 1-67.</p>
+<p><a href="http://journals.sagepub.com/doi/abs/10.1177/0962280213490014">Moreno-Betancur M, Chavance M.</a> Sensitivity analysis of incomplete longitudinal data departing from the missing at random assumption: Methodology and application in a clinical trial with drop-outs. <em>Statistical Methods in Medical Research</em> 2016; 25(4) 1471-1489.</p>
+<p><a href="https://academic.oup.com/aje/article-lookup/doi/10.1093/aje/kww107">Leacy FP, Floyd S, Yates TA, White IR.</a> Analyses of Sensitivity to the Missing-at-Random Assumption Using Multiple Imputation With Delta Adjustment: Application to a Tuberculosis/HIV Prevalence Survey With Incomplete HIV-Status Data. <em>American Journal of Epidemiology</em>, 185(4):304-315.</p>
+<p><a href="http://onlinelibrary.wiley.com/doi/10.1111/biom.12295/full">Moreno-Betancur M, Rey G, Latouche A.</a> Direct likelihood inference and sensitivity analysis for competing risks regression with missing causes of failure. <em>Biometrics</em> 2015; 71(2):498-507.</p>
 <div id="cite-this-document-as" class="section level4">
 <h4>Cite this document as:</h4>
 <p>Moreno-Betancur M, Leacy FP, Tompsett D, White I. “mice: The NARFCS procedure for sensitivity analyses” (Available at: <a href="https://rawgit.com/moreno-betancur/NARFCS/master/README.html" class="uri">https://rawgit.com/moreno-betancur/NARFCS/master/README.html</a>)</p>
