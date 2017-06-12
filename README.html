@@ -72,90 +72,104 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 
 
 
-<p>This document illustrates how to perform sensitivity analyses using the Not At Random Fully Conditional Specification (NARFCS) procedure implemented in an extension of the package <code>mice</code> (<a href="https://www.jstatsoft.org/article/view/v045i03/v45i03.pdf">van Buuren S, Groothuis-Oudshoorn K., 2011</a>).</p>
+<p>This document illustrates how to perform sensitivity analyses using the Not At Random Fully Conditional Specification (NARFCS) procedure implemented in an extension of the R package <code>mice</code>.</p>
 <div id="background" class="section level2">
 <h2>Background</h2>
-<p>Standard multiple imputation procedures to deal with missing data, such as the Fully Conditional Specification (FCS) approach implemented in the package <code>mice</code>, rely on the marginal and conditional distributions of variables in the observed data to impute the missing values.</p>
-<p>A <em>sensitivity analysis</em> in this setting aims at assessing how our results would change if the distribution of the missing data differed in a systematic way from that of the observed data.</p>
-<p>The NARFCS procedure was first studied by Leacy (2016), and is a generalisation of the so-called <em>delta-adjustment</em> sensitivity analysis method to the case with multiple incomplete variables. Specifically, the NARFCS procedure shifts the imputations drawn at each iteration of <code>mice</code> by a user-specified quantity that can vary across subjects, to reflect systematic departures of the missing data from the observed data distribution.</p>
-<p>Tompsett et al. (in preparation) provide recommendations about the application of NARFCS in practice. Here we focus on the syntax for applying NARFCS to a dataset using an extension of the package <code>mice</code> that includes dedicated imputation methods. At the moment, methods are available for continuous and binary variables only. These are called <code>normSens</code> and <code>logregSens</code> but require additional arguments to be passed on to <code>mice</code>, as described below.</p>
+<p>Standard multiple imputation procedures to deal with missing data typically rely on the marginal and conditional distributions of variables in the observed data to impute the missing values. This is for instance the basis of the Fully Conditional Specification (FCS) approach to handle multiple incomplete variables, which is generally implemented using Multiple Imputation by Chained Equations (MICE) as in the R package <code>mice</code> (<a href="https://www.jstatsoft.org/article/view/v045i03/v45i03.pdf">van Buuren S, Groothuis-Oudshoorn K., 2011</a>).</p>
+<p>A <em>sensitivity analysis</em> in this setting aims at assessing how our results would change if the distribution of the missing data differed in a systematic way from that of the observed data, which is something that we cannot of course assess using the latter.</p>
+<p>The NARFCS procedure was first formally studied by Leacy (2016), and generalises the so-called <em>delta-adjustment</em> sensitivity analysis method to the case with multiple incomplete variables within the FCS framework. In practical terms, the NARFCS procedure consists in shifting the imputations drawn at each iteration of MICE by a user-specified quantity that can vary across subjects, to reflect systematic departures of the missing data from the observed data distribution.</p>
+<p>Tompsett et al. (in preparation) provide recommendations for the application of NARFCS in practice, particularly regarding the interpretation and elicitation of the sensitivity parameters required by the procedure. Here we present the syntax for applying NARFCS to a dataset using an extension of the package <code>mice</code> that includes dedicated imputation methods. At the moment, methods are available for continuous and binary variables only, called <code>normSens</code> and <code>logregSens</code> respectively. Their use requires additional arguments to be passed on to <code>mice</code>, as described below.</p>
 </div>
 <div id="installation-of-the-extension" class="section level2">
 <h2>Installation of the extension</h2>
-<p>The most up-to-date NARFCS extension of the package <code>mice</code> (<a href="https://www.jstatsoft.org/article/view/v045i03/v45i03.pdf">van Buuren S, Groothuis-Oudshoorn K., 2011</a>) can be installed directly from GitHub using the <code>devtools</code> package. To do this you should first check you have devtools installed by executing the following commands from within your R session:</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">if (!<span class="kw">require</span>(devtools)) {
-  <span class="kw">install.packages</span>(<span class="st">&quot;devtools&quot;</span>)
-}</code></pre></div>
-<p>Then execute the following commands to install the NARFCS extension of <code>mice</code>:</p>
+<p>The most up-to-date NARFCS extension of the package <code>mice</code> can be installed directly from GitHub using the <code>devtools</code> package, which must be first installed from CRAN by the user to proceed. Then it suffices to execute the following commands to install the NARFCS extension of <code>mice</code>:</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(devtools)
 <span class="kw">install_github</span>(<span class="st">&quot;moreno-betancur/mice&quot;</span>)</code></pre></div>
 </div>
 <div id="loading-and-looking-at-example-dataset" class="section level2">
 <h2>Loading and looking at example dataset</h2>
 <p>(<a href="https://rawgit.com/moreno-betancur/NARFCS/master/README.html">click here if you see raw rather than compiled Latex formulas below</a>)</p>
-<p>To illustrate, we use a simulated dataset <code>datmis</code> (available for download <a href="https://rawgit.com/moreno-betancur/NARFCS/master/datmis.csv">here</a>) with one binary variable <span class="math inline">\(X\)</span> and a continuous variable <span class="math inline">\(Y\)</span>, both having missing data, and <span class="math inline">\(M_x\)</span> and <span class="math inline">\(M_y\)</span> being the corresponding missingness indicators (i.e. equal to 1 if variable is missing and 0 otherwise).</p>
+<p>To illustrate, we use a simulated dataset <code>datmis</code> (available for download <a href="https://rawgit.com/moreno-betancur/NARFCS/master/datmis.csv">here</a>) which consists of:</p>
+<ul>
+<li>a binary variable <span class="math inline">\(X\)</span>, taking the values “No” (the reference level) and “Yes”,</li>
+<li>a continuous variable <span class="math inline">\(Y\)</span>, and</li>
+<li>a categorical variable <span class="math inline">\(Z\)</span>, with 3 categories: “Cat0” (the reference level), “Cat1” and “Cat2”.</li>
+</ul>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">datmis&lt;-<span class="kw">read.csv</span>(<span class="st">&quot;datmis.csv&quot;</span>)
 <span class="kw">head</span>(datmis)</code></pre></div>
-<pre><code>##    X          Y Mx My
-## 1  0   3.693582  0  0
-## 2  0 -12.398012  0  0
-## 3  0 -17.878958  0  0
-## 4  0 -19.245551  0  0
-## 5 NA         NA  1  1
-## 6  0   9.126956  0  0</code></pre>
-<p>Let’s look at the percentage of missing values in <span class="math inline">\(X\)</span> and <span class="math inline">\(Y\)</span>, and the percentage of incomplete cases:</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="dv">100</span> *<span class="st"> </span><span class="kw">c</span>(<span class="kw">mean</span>(datmis$Mx), <span class="kw">mean</span>(datmis$My))</code></pre></div>
-<pre><code>## [1] 19.0 21.6</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="dv">100</span> *<span class="st"> </span><span class="kw">c</span>(<span class="kw">mean</span>(datmis$Mx ==<span class="st"> </span><span class="dv">1</span> |<span class="st"> </span>datmis$My ==<span class="st"> </span><span class="dv">1</span>))</code></pre></div>
-<pre><code>## [1] 29.4</code></pre>
-<p>Assume that the aim is to estimate the coefficient of <span class="math inline">\(X\)</span> in a linear regression of <span class="math inline">\(Y\)</span> on <span class="math inline">\(X\)</span>. Before illustrating NARFCS, we provide a recap of a standard FCS analysis one may do in this case. This will be the point of departure for the NARFCS sensitivity analysis and will also help to draw some parallels between the arguments provided to <code>mice</code> in the FCS analysis and those additional ones required for NARFCS.</p>
-<p>We first need to turn X into a factor for <code>mice</code> to recognise this as a binary variable:</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">datmis$X&lt;-<span class="kw">as.factor</span>(datmis$X)</code></pre></div>
+<pre><code>##      X          Y    Z
+## 1   No   3.693582 Cat1
+## 2   No -12.398012 Cat2
+## 3   No -17.878958 Cat2
+## 4   No -19.245551 Cat2
+## 5 &lt;NA&gt;         NA Cat0
+## 6   No   9.126956 Cat1</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">summary</span>(datmis)</code></pre></div>
+<pre><code>##     X             Y              Z      
+##  No  :264   Min.   :-32.700   Cat0:167  
+##  Yes :141   1st Qu.: -5.713   Cat1:166  
+##  NA's: 95   Median :  3.491   Cat2:167  
+##             Mean   :  3.524             
+##             3rd Qu.: 12.249             
+##             Max.   : 49.663             
+##             NA's   :108</code></pre>
+<p>The variables <span class="math inline">\(X\)</span> and <span class="math inline">\(Y\)</span> are incomplete and <span class="math inline">\(Z\)</span> is complete, and it is easily verified that a <em>complete case</em> analysis would discard around 30% of the records:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="dv">100</span> *<span class="st"> </span><span class="kw">c</span>(<span class="kw">sum</span>(<span class="kw">is.na</span>(datmis$X)), <span class="kw">sum</span>(<span class="kw">is.na</span>(datmis$Y)), <span class="kw">sum</span>(<span class="kw">is.na</span>(datmis$Z)))/<span class="kw">nrow</span>(datmis)</code></pre></div>
+<pre><code>## [1] 19.0 21.6  0.0</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="dv">100</span> *<span class="st"> </span><span class="kw">sum</span>(!<span class="kw">is.na</span>(datmis$X) &amp;<span class="st"> </span>!<span class="kw">is.na</span>(datmis$Y) &amp;<span class="st"> </span>!<span class="kw">is.na</span>(datmis$Z))/<span class="kw">nrow</span>(datmis)</code></pre></div>
+<pre><code>## [1] 70.6</code></pre>
+<p>Suppose that the aim is to estimate the coefficient of <span class="math inline">\(X\)</span> in a linear regression of <span class="math inline">\(Y\)</span> on <span class="math inline">\(X\)</span> and <span class="math inline">\(Z\)</span>. Before illustrating NARFCS, we provide a recap of a standard FCS analysis one may do in this case. This will be the point of departure for the NARFCS sensitivity analysis and will also help to draw some parallels between the arguments provided to <code>mice</code> in the FCS analysis and those additional ones required for NARFCS.</p>
 </div>
 <div id="fcs-analysis" class="section level2">
 <h2>FCS analysis</h2>
 <div id="fcs-univariate-imputation-models" class="section level3">
 <h3>FCS univariate imputation models</h3>
-<p>A typical FCS analysis with <code>mice</code> would be to use a logistic model to impute <span class="math inline">\(X\)</span> and a linear model to impute <span class="math inline">\(Y\)</span>, with <span class="math inline">\(Y\)</span> included as predictor in the imputation model for <span class="math inline">\(X\)</span> and vice-versa. Thus, the univariate imputation model for <span class="math inline">\(X\)</span> would specify the conditional expectation of <span class="math inline">\(X\)</span> given the other variables as follows: <span class="math display">\[\text{logit}\{E(X|Y,M_y,M_x)\}=\beta_{X0}+ \beta_{XY} Y.\]</span> Similary, the model for <span class="math inline">\(Y\)</span> would specify: <span class="math display">\[ E(Y|X,M_x,M_y)=\beta_{Y0}+ \beta_{YX} X.\]</span></p>
+<p>A typical FCS analysis with <code>mice</code> would be to use a logistic model to impute <span class="math inline">\(X\)</span> and a linear model to impute <span class="math inline">\(Y\)</span>, both including <span class="math inline">\(Z\)</span> as predictor, and with <span class="math inline">\(Y\)</span> included as predictor in the imputation model for <span class="math inline">\(X\)</span> and vice-versa. A usual, for mathematical purposes, <span class="math inline">\(X\)</span> is taken to be the binary 0/1 indicator for the “Yes” category, and including <span class="math inline">\(Z\)</span> as predictor means that we include the binary indicators <span class="math inline">\(Z_1\)</span> and <span class="math inline">\(Z_2\)</span> for categories “Cat1” and “Cat2” in the models. Thus, the univariate imputation model for <span class="math inline">\(X\)</span> would specify the conditional expectation of <span class="math inline">\(X\)</span> given the other variables as follows: <span class="math display">\[\text{logit}\{E(X|Y,Z)\}=\beta_{X0}+ \beta_{XY} Y+ \beta_{XZ_{1}} Z_1+\beta_{XZ_{2}} Z_2.\]</span> Similarly, the model for <span class="math inline">\(Y\)</span> would specify: <span class="math display">\[ E(Y|X,Z)=\beta_{Y0}+ \beta_{YX} X + \beta_{YZ_{1}} Z_1+\beta_{YZ_{2}} Z_2.\]</span> and Var<span class="math inline">\((Y|X,Z)=\sigma^2\)</span>, assuming constant variance.</p>
 </div>
-<div id="running-it-with-mice" class="section level3">
-<h3>Running it with mice</h3>
-<p>The FCS analysis with <code>mice</code> can be done by specifying the linear predictor of each of these models in either of two ways: using the matrix syntax (through the <code>predictorMatrix</code> argument) or using the formula syntax (through the <code>form</code> argument).</p>
+<div id="running-fcs-with-mice" class="section level3">
+<h3>Running FCS with mice</h3>
+<p>This FCS analysis can be performed with <code>mice</code> by specifying the linear predictor of each of these models in either of two ways: using the matrix syntax (through the <code>predictorMatrix</code> argument) or using the formula syntax (through the <code>form</code> argument).</p>
 <div id="matrix-syntax-for-fcs" class="section level4">
 <h4>Matrix syntax for FCS</h4>
-<p>With matrix syntax, the analysis is perfomed as follows:</p>
+<p>With the matrix syntax, the analysis requires specifying the predictors of each imputation model through a matrix of dimension equal to the number of variables in the dataset (in this case 3). A cell with a 1 indicates that the column variable is included as predictor in the imputation model of the row variable, with both rows and columns representing the variables in the order in which they appear in the dataset. Other cells are set to zero:</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(mice)
 
 <span class="co">#Set-up predictor matrix</span>
-predMatrix&lt;-<span class="kw">matrix</span>(<span class="kw">rep</span>(<span class="dv">0</span>,<span class="dv">16</span>),<span class="dt">ncol=</span><span class="dv">4</span>)
-predMatrix[<span class="dv">1</span>,]&lt;-<span class="kw">c</span>(<span class="dv">0</span>,<span class="dv">1</span>,<span class="dv">0</span>,<span class="dv">0</span>)
-predMatrix[<span class="dv">2</span>,]&lt;-<span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>)
+predMatrix&lt;-<span class="kw">matrix</span>(<span class="kw">rep</span>(<span class="dv">0</span>,<span class="dv">9</span>),<span class="dt">ncol=</span><span class="dv">3</span>)
+<span class="kw">colnames</span>(predMatrix)&lt;-<span class="kw">rownames</span>(predMatrix)&lt;-<span class="kw">c</span>(<span class="st">&quot;X&quot;</span>,<span class="st">&quot;Y&quot;</span>,<span class="st">&quot;Z&quot;</span>)
+predMatrix[<span class="st">&quot;X&quot;</span>,]&lt;-<span class="kw">c</span>(<span class="dv">0</span>,<span class="dv">1</span>,<span class="dv">1</span>)
+predMatrix[<span class="st">&quot;Y&quot;</span>,]&lt;-<span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">0</span>,<span class="dv">1</span>)
 
 predMatrix</code></pre></div>
-<pre><code>##      [,1] [,2] [,3] [,4]
-## [1,]    0    1    0    0
-## [2,]    1    0    0    0
-## [3,]    0    0    0    0
-## [4,]    0    0    0    0</code></pre>
+<pre><code>##   X Y Z
+## X 0 1 1
+## Y 1 0 1
+## Z 0 0 0</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co">#FCS analysis with matrix syntax</span>
-impFCS&lt;-<span class="kw">mice</span>(datmis,<span class="dt">m=</span><span class="dv">5</span>, <span class="dt">method=</span><span class="kw">c</span>(<span class="st">&quot;logreg&quot;</span>,<span class="st">&quot;norm&quot;</span>,<span class="st">&quot;&quot;</span>,<span class="st">&quot;&quot;</span>), <span class="dt">predictorMatrix=</span>predMatrix,<span class="dt">seed=</span><span class="dv">234235</span>,<span class="dt">print=</span>F)
+impFCS&lt;-<span class="kw">mice</span>(datmis,<span class="dt">m=</span><span class="dv">5</span>, <span class="dt">method=</span><span class="kw">c</span>(<span class="st">&quot;logreg&quot;</span>,<span class="st">&quot;norm&quot;</span>,<span class="st">&quot;&quot;</span>), <span class="dt">predictorMatrix=</span>predMatrix,<span class="dt">seed=</span><span class="dv">234235</span>,<span class="dt">print=</span>F)
 
 <span class="co">#Pool results from linear regression from imputed datasets:</span>
-<span class="kw">pool</span>(<span class="kw">with</span>(impFCS,<span class="kw">lm</span>(Y~X)))$qbar</code></pre></div>
-<pre><code>## (Intercept)          X2 
-##   -1.270058   13.169915</code></pre>
+<span class="kw">pool</span>(<span class="kw">with</span>(impFCS,<span class="kw">lm</span>(Y~X+Z)))$qbar</code></pre></div>
+<pre><code>## (Intercept)          X2          Z2          Z3 
+##   15.958084    6.594639  -13.450028  -26.004113</code></pre>
+<p><strong>Note 1</strong>: For categorical variables, the function <code>pool</code> names the coefficients in the output according to the rank of the category. Thus “X2” corresponds to the second category of <span class="math inline">\(X\)</span>, and “Z2” and “Z3” to the second and third category of <span class="math inline">\(Z\)</span>, respectively. It is thus important to note that, if not instructed otherwise, R automatically orders the levels of a factor with the reference level first and the rest following in alphabetical order. We can check the order of the levels of a factor variable using the <code>levels</code> function:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">levels</span>(datmis$X)</code></pre></div>
+<pre><code>## [1] &quot;No&quot;  &quot;Yes&quot;</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">levels</span>(datmis$Z)</code></pre></div>
+<pre><code>## [1] &quot;Cat0&quot; &quot;Cat1&quot; &quot;Cat2&quot;</code></pre>
+<p>To set the desired reference level, the user can use the <code>relevel</code> function (see <code>?relevel</code>).</p>
 </div>
 <div id="formula-syntax-for-fcs" class="section level4">
 <h4>Formula syntax for FCS</h4>
-<p>The formula syntax is sometimes more straightforward, especially when it comes to interactions (though for now we have none - see further below):</p>
+<p>The formula syntax is sometimes more straightforward to use, especially when it comes to interactions (though for now we have none - see <strong>Note 2</strong> below). Each imputation model is specified using a formula in the same manner used for specifying models in R’s standard model-fitting functions:</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co">#FCS analysis using formula syntax</span>
-impFCS&lt;-<span class="kw">mice</span>(datmis,<span class="dt">m=</span><span class="dv">5</span>, <span class="dt">method=</span><span class="kw">c</span>(<span class="st">&quot;logreg&quot;</span>,<span class="st">&quot;norm&quot;</span>,<span class="st">&quot;&quot;</span>,<span class="st">&quot;&quot;</span>), <span class="dt">form=</span><span class="kw">c</span>(<span class="st">&quot;~1+Y&quot;</span>,<span class="st">&quot;~1+X&quot;</span>,<span class="st">&quot;&quot;</span>,<span class="st">&quot;&quot;</span>),<span class="dt">seed=</span><span class="dv">234235</span>,<span class="dt">print=</span>F)
+impFCS&lt;-<span class="kw">mice</span>(datmis,<span class="dt">m=</span><span class="dv">5</span>, <span class="dt">method=</span><span class="kw">c</span>(<span class="st">&quot;logreg&quot;</span>,<span class="st">&quot;norm&quot;</span>,<span class="st">&quot;&quot;</span>), <span class="dt">form=</span><span class="kw">c</span>(<span class="st">&quot;~1+Y+Z&quot;</span>,<span class="st">&quot;~1+X+Z&quot;</span>,<span class="st">&quot;&quot;</span>),<span class="dt">seed=</span><span class="dv">234235</span>,<span class="dt">print=</span>F)
 
 <span class="co">#Pool results from linear regression from imputed datasets:</span>
-<span class="kw">pool</span>(<span class="kw">with</span>(impFCS,<span class="kw">lm</span>(Y~X)))$qbar</code></pre></div>
-<pre><code>## (Intercept)          X2 
-##   -1.270058   13.169915</code></pre>
-<p>At a given MICE iteration, the <span class="math inline">\(\beta\)</span>-parameters are estimated from the observed and current imputed values of all variables, but ultimately depend on the expectations and associations of the variables in the observed data. One can thus ask what would happen if some aspects of the distribution of the missing data differed from what can be inferred from the observed data. Answering this question is the aim of a sensitvity analysis which we will perform using the NARFCS procedure.</p>
+<span class="kw">pool</span>(<span class="kw">with</span>(impFCS,<span class="kw">lm</span>(Y~X+Z)))$qbar</code></pre></div>
+<pre><code>## (Intercept)          X2          Z2          Z3 
+##    15.98365     6.58963   -13.48023   -26.04045</code></pre>
+<p>At a given MICE iteration, the <span class="math inline">\(\beta\)</span>-parameters in the imputation models above are estimated from the observed and current imputed values of all variables, but ultimately depend on the expectations and associations of the variables in the observed data. One can thus ask what would happen if some aspects of the distribution of the missing data differed from what can be inferred from the observed data. Answering this question is the aim of a sensitivity analysis, which we will perform using the NARFCS procedure.</p>
 </div>
 </div>
 </div>
@@ -164,91 +178,94 @@ impFCS&lt;-<span class="kw">mice</span>(datmis,<span class="dt">m=</span><span c
 <div id="narfcs-univariate-imputation-models" class="section level3">
 <h3>NARFCS univariate imputation models</h3>
 <p>NARFCS (Leacy 2016) is a generalisation to the case with multiple incomplete variables of the so-called <em>delta-adjustment</em> method for sensitivity analyses. In the case of one incomplete variable, we have previously used the method both for continuous (<a href="http://journals.sagepub.com/doi/abs/10.1177/0962280213490014">Moreno-Betancur and Chavance, 2016</a>) and binary (<a href="https://academic.oup.com/aje/article-lookup/doi/10.1093/aje/kww107">Leacy et al. 2017</a>; <a href="http://onlinelibrary.wiley.com/doi/10.1111/biom.12295/full">Moreno-Betancur et al. 2015</a>) variables, and various other examples exist in the literature.</p>
-<p>A senstivity analysis using the NARFCS procedure aims at shifting the imputations drawn at each iteration by a quantity determined by a linear combination of the variables already included in the imputation model. Since only the imputed values are shifted, and not the observed, this shift only concerns individuals with the corresponding value missing (i.e. with <span class="math inline">\(M_x=1\)</span> if <span class="math inline">\(X\)</span> is being imputed and <span class="math inline">\(M_y=1\)</span> if <span class="math inline">\(Y\)</span> is being imputed). Formally, this comes to specifying a univariate imputation model with an additional term representing an interaction between the missingness indicator and the chosen linear combination for the shift. In our example, this could be as follows:</p>
-<p><span class="math display">\[ \text{logit}\{E(X|Y,M_y,M_x)\}=\underbrace{\beta_{X0}+ \beta_{XY} Y}_{\text{IDENTIFIABLE PART}} +\underbrace{M_x*(\delta_{X0}+\delta_{XY}Y)}_\text{UNIDENTIFIABLE PART}.\]</span> and <span class="math display">\[ E(Y|X,M_x,M_y)=\underbrace{\beta_{Y0}+ \beta_{YX} X}_{\text{IDENTIFIABLE PART}} +\underbrace{M_y*(\delta_{Y0}+\delta_{YX}X)}_\text{UNIDENTIFIABLE PART}.\]</span></p>
-<p>The <span class="math inline">\(\delta\)</span>-parameters that make up the linear combination in the shift are called <em>sensitvity parameters</em>. These values pertain to the way in which the distribution of the missing data departs from that of the observed data, and as such are not estimable from the observed data, that is, they are unidentifiable. Thus, the NARFCS model consists of an identfiable part, with <span class="math inline">\(\beta\)</span>-parameters estimated from observed data, and an unidentifiable part, with <span class="math inline">\(\delta\)</span>- (sensitivity) parameters.</p>
-<p>Typically plausible ranges for the latter would be elicited from experts. For this, it helps to understand their interpretation. Re-writing the equations above, we see that in this example the <span class="math inline">\(\delta\)</span>-parameters correspond to shifts in both the intercept and slope of the model (in the corresponding scale) for the missing data:</p>
-<p><span class="math display">\[ \text{logit}\{E(X|Y,M_y,M_x)\}= (\beta_{X0}+\delta_{X0}M_x)+ (\beta_{XY} +\delta_{XY}M_x)Y\]</span> and <span class="math display">\[ E(Y|X,M_x,M_y)= (\beta_{Y0}+\delta_{Y0}M_y)+ (\beta_{YX} +\delta_{YX}M_y)X\]</span></p>
-<p>Of course, given that each sensitivity parameter will be varied across a range of values, for the sake of parsimony we will often assume that many of the <span class="math inline">\(\delta\)</span>-parameters are zero (i.e. exclude the term from the unidentifiable part), and we will vary only a key subset of them across a range of non-zero values according to the context and target parameter of interest. Indeed, each vector of values for the vector of sensitvity parameters will yield one set of results for the analysis. Thus, a key aspect of sensitivity analyses is how to process and report the large volume of results that arises from these analyses. This is out of the scope of this document and we refer the reader to the aforementioned references for some examples.</p>
-<p>Here, we show how to perform the NARFCS analysis with <code>mice</code> for one given vector of values for the <span class="math inline">\(\delta\)</span>-parameters in our example. Specifically, we set <span class="math inline">\(\delta_{XY}=0\)</span> (that is, this term is excluded), <span class="math inline">\(\delta_{Y0}=2\)</span>, <span class="math inline">\(\delta_{YX}=5\)</span> and <span class="math inline">\(\delta_{X0}=-4\)</span>.</p>
+<p>A sensitivity analysis using the NARFCS procedure aims at shifting the imputations drawn at each iteration by a constant or, more generally, by a quantity determined by a linear combination of the variables already included in the imputation model. When imputing a binary variable, it is the linear predictor of the imputation model that is shifted prior to drawing the imputed value.</p>
+<p>Since only the imputed values are shifted, and not the observed, this shift only concerns individuals with the corresponding value missing. T</p>
+<p>Of course, given that each sensitivity parameter will be varied across a range of values, for the sake of parsimony we will often assume that many of the <span class="math inline">\(\delta\)</span>-parameters are zero (i.e. exclude the term from the unidentifiable part), and we will vary only a key subset of them across a range of non-zero values according to the context and target parameter of interest. Indeed, each set of values for the set of sensitivity parameters will yield one set of results for the analysis. Thus, a key aspect of sensitivity analyses is how to process and report the large volume of results that arises from these analyses. This is beyond the scope of this document and we refer the reader to the aforementioned references for some examples.</p>
+<p>Here, we show how to perform the NARFCS analysis with <code>mice</code> for one given set of values for the <span class="math inline">\(\delta\)</span>-parameters in our example. Specifically, in the model for <span class="math inline">\(X\)</span>, we set <span class="math inline">\(\delta_{X0}=-4\)</span> and <span class="math inline">\(\delta_{XY}=\delta_{XZ_1}=\delta_{XZ_2}=0\)</span>; that is, all terms except the intercept are excluded, so the shift when imputing <span class="math inline">\(X\)</span> is just a constant. For <span class="math inline">\(Y\)</span>, we set <span class="math inline">\(\delta_{Y0}=2\)</span>, <span class="math inline">\(\delta_{YX}=0\)</span> (i.e. the <span class="math inline">\(X\)</span>-term is excluded), <span class="math inline">\(\delta_{YZ_1}=1\)</span> and <span class="math inline">\(\delta_{YZ_2}=-3\)</span>.</p>
 </div>
-<div id="running-it-with-mice-1" class="section level3">
-<h3>Running it with mice</h3>
-<p>The specification of the predictors in the identifiable part of the model is still done the same way as in the FCS analysis, using the <code>predictorMatrix</code> or <code>form</code> arguments. To specify the unidentifable part, the user must do three changes to the way <code>mice</code> was called for the FCS analysis:</p>
+<div id="running-narfcs-with-mice" class="section level3">
+<h3>Running NARFCS with mice</h3>
+<p>The specification of the predictors in the identifiable part of the model is still done the same way as in the FCS analysis, using the <code>predictorMatrix</code> or <code>form</code> arguments. To specify the unidentifiable part, the user must make three changes to the way <code>mice</code> was called for the FCS analysis:</p>
 <ol style="list-style-type: decimal">
+<li><p>The user must specify special imputation methods for the incomplete variables that are to be imputed using NARFCS, which are not necessarily (nor usually) all. In our example we will apply NARFCS to <span class="math inline">\(X\)</span> and <span class="math inline">\(Y\)</span>. Instead of <code>&quot;norm&quot;</code> and <code>&quot;logreg&quot;</code>, the user must use <code>&quot;normSens&quot;</code> and <code>&quot;logregSens&quot;</code> according to the type (continuous or binary, respectively) of the incomplete variable. No other imputation methods have been extended for NARFCS at the moment.</p></li>
 <li><p>The predictors in the unidentifiable part of the NARFCS model are specified through either of two additional arguments, <code>predictorSens</code> or <code>formSens</code>, in a similar way as for the identifiable part.</p></li>
-<li><p>The user needs to specify the values of the sensitivity parameters through the argument <code>parmSens</code>, by passing a list of vectors, with the jth entry being the vector of sensitivity parameters for the imputation model of the jth variable in the dataset. The size of the jth entry must match the number of predictors speficied for unidentified part of the imputation model of the jth variable through <code>predictorSens</code> or <code>formSens</code>, plus 1 (for the intercept). If one of the predictors is a categorical variable, say with <span class="math inline">\(K\)</span> categories, then only one sensitivity parameter value needs to be passed on for that predictor and this value is used for all <span class="math inline">\(K\)</span> categories, i.e. it is replicated <span class="math inline">\(K\)</span> times. If one wants a different value for each category, then one can always add the corresponding dummy variables to the dataset prior to calling <code>mice</code> and treat these as binary variables, with each assigned its own sensitivity parameter value.</p></li>
-<li><p>The imputation methods for the variables that have sensitivity paramters (in this case both <span class="math inline">\(X\)</span> and <span class="math inline">\(Y\)</span>) are no longer <code>&quot;norm&quot;</code> and <code>&quot;logreg&quot;</code> but rather <code>&quot;normSens&quot;</code> and <code>&quot;logregSens&quot;</code>. No other imputation methods have been extended for NARFCS at the moment.</p></li>
+<li><p>The values of the sensitivity parameters have to be specified through the argument <code>parmSens</code>, which is a list object with one element per variable in the dataset in the order in which they appear there. Its elements are lists of vectors, specified as follows:</p></li>
 </ol>
+<ul>
+<li><p>For variables in the dataset that are complete or to be imputed via standard FCS, the corresponding element is a list with 0 as unique element, i.e. <code>list(0)</code> (this is the default for all variables).</p></li>
+<li><p>For variables to be imputed via NARFCS, it is a list of length equal to 1 (for the intercept) plus the number of variables included as predictors in the unidentifiable part of the imputation model, as specified through <code>predictorSens</code> or <code>formSens</code>. The first component is the sensitivity parameter corresponding to the intercept term, which is always included, and is thus a scalar (i.e. a vector of length 1). The following components are sensitivity parameter vectors, of length 1 except for factors (see below), corresponding to each of the predictor variables. If using the matrix syntax, these must be provided in the order in which they appear in the dataset (which is the order in which they appear in the matrix). If using the formula syntax, they are provided in the order in which they appear in the corresponding formula. For a factor predictor variable with <span class="math inline">\(K\)</span> categories, the element is a vector of length <span class="math inline">\(K-1\)</span> containing the sensitivity parameters for the <span class="math inline">\(K-1\)</span> indicator variables of the non-reference categories, following the order of the levels of that factor variable (see related <strong>Note 1</strong> above). These parameters are interpreted relative to the reference category, as usual. As a reminder, sensitivity parameters must be specified in the log-odds scale when imputing a binary variable (<code>&quot;logregSens&quot;</code> method).</p></li>
+</ul>
+<p>Since the specification of the <code>parmSens</code> argument is delicate, the program runs various checks to verify that the lengths of the lists and vectors are consistent with what was provided through <code>predictorSens</code> or <code>formSens</code> arguments, and provides informative error messages if this is not the case. When the procedure runs successfully and <code>printFlag=TRUE</code> (the default), the sensitivity parameters used for each predictor variable/factor level in each imputation model are printed out on the console so that the user can check that these correspond to what was intended. Carefully checking this output is highly recommended.</p>
+<p>We will now illustrate how, together, these three steps allow us to apply NARFCS in our example using each possible syntax.</p>
 <div id="matrix-syntax-for-narfcs" class="section level4">
 <h4>Matrix syntax for NARFCS</h4>
-<p>Using the matrix syntax, the NARFCS procedure with the above models and choice of parameters is done as follows:</p>
+<p>Using the matrix syntax, the NARFCS procedure with the above models and choice of parameters is performed as follows:</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co">#Set-up predictor matrix for identifiable part as before:</span>
-predMatrix&lt;-<span class="kw">matrix</span>(<span class="kw">rep</span>(<span class="dv">0</span>,<span class="dv">16</span>),<span class="dt">ncol=</span><span class="dv">4</span>)
-predMatrix[<span class="dv">1</span>,]&lt;-<span class="kw">c</span>(<span class="dv">0</span>,<span class="dv">1</span>,<span class="dv">0</span>,<span class="dv">0</span>)
-predMatrix[<span class="dv">2</span>,]&lt;-<span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>)
+predMatrix&lt;-<span class="kw">matrix</span>(<span class="kw">rep</span>(<span class="dv">0</span>,<span class="dv">9</span>),<span class="dt">ncol=</span><span class="dv">3</span>)
+<span class="kw">colnames</span>(predMatrix)&lt;-<span class="kw">rownames</span>(predMatrix)&lt;-<span class="kw">c</span>(<span class="st">&quot;X&quot;</span>,<span class="st">&quot;Y&quot;</span>,<span class="st">&quot;Z&quot;</span>)
+predMatrix[<span class="st">&quot;X&quot;</span>,]&lt;-<span class="kw">c</span>(<span class="dv">0</span>,<span class="dv">1</span>,<span class="dv">1</span>)
+predMatrix[<span class="st">&quot;Y&quot;</span>,]&lt;-<span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">0</span>,<span class="dv">1</span>)
 
 predMatrix</code></pre></div>
-<pre><code>##      [,1] [,2] [,3] [,4]
-## [1,]    0    1    0    0
-## [2,]    1    0    0    0
-## [3,]    0    0    0    0
-## [4,]    0    0    0    0</code></pre>
+<pre><code>##   X Y Z
+## X 0 1 1
+## Y 1 0 1
+## Z 0 0 0</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co">#Set-up predictor matrix for unidentifiable part:</span>
-predSens&lt;-<span class="kw">matrix</span>(<span class="kw">rep</span>(<span class="dv">0</span>,<span class="dv">16</span>),<span class="dt">ncol=</span><span class="dv">4</span>)
-predSens[<span class="dv">1</span>,]&lt;-<span class="kw">c</span>(<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>)
-predSens[<span class="dv">2</span>,]&lt;-<span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>)
+predSens&lt;-<span class="kw">matrix</span>(<span class="kw">rep</span>(<span class="dv">0</span>,<span class="dv">9</span>),<span class="dt">ncol=</span><span class="dv">3</span>)
+<span class="kw">colnames</span>(predSens)&lt;-<span class="kw">c</span>(<span class="st">&quot;:X&quot;</span>,<span class="st">&quot;:Y&quot;</span>,<span class="st">&quot;:Z&quot;</span>)
+<span class="kw">rownames</span>(predSens)&lt;-<span class="kw">c</span>(<span class="st">&quot;X&quot;</span>,<span class="st">&quot;Y&quot;</span>,<span class="st">&quot;Z&quot;</span>)
+
+predSens[<span class="st">&quot;X&quot;</span>,]&lt;-<span class="kw">c</span>(<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>)
+predSens[<span class="st">&quot;Y&quot;</span>,]&lt;-<span class="kw">c</span>(<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">1</span>)
 
 predSens</code></pre></div>
-<pre><code>##      [,1] [,2] [,3] [,4]
-## [1,]    0    0    0    0
-## [2,]    1    0    0    0
-## [3,]    0    0    0    0
-## [4,]    0    0    0    0</code></pre>
+<pre><code>##   :X :Y :Z
+## X  0  0  0
+## Y  0  0  1
+## Z  0  0  0</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># NARFCS analysis using matrix syntax</span>
-impNARFCS&lt;-<span class="kw">mice</span>(datmis,<span class="dt">m=</span><span class="dv">5</span>, <span class="dt">method=</span><span class="kw">c</span>(<span class="st">&quot;logregSens&quot;</span>,<span class="st">&quot;normSens&quot;</span>,<span class="st">&quot;&quot;</span>,<span class="st">&quot;&quot;</span>), <span class="dt">predictorMatrix=</span>predMatrix,
-                 <span class="dt">predictorSens=</span>predSens, <span class="dt">parmSens=</span><span class="kw">list</span>(<span class="kw">c</span>(-<span class="dv">4</span>),<span class="kw">c</span>(<span class="dv">2</span>,<span class="dv">5</span>)), <span class="dt">seed=</span><span class="dv">234235</span>,<span class="dt">print=</span>F)
+impNARFCS&lt;-<span class="kw">mice</span>(datmis,<span class="dt">m=</span><span class="dv">5</span>, <span class="dt">method=</span><span class="kw">c</span>(<span class="st">&quot;logregSens&quot;</span>,<span class="st">&quot;normSens&quot;</span>,<span class="st">&quot;&quot;</span>), <span class="dt">predictorMatrix=</span>predMatrix,
+                 <span class="dt">predictorSens=</span>predSens, <span class="dt">parmSens=</span><span class="kw">list</span>(<span class="kw">list</span>(-<span class="dv">4</span>),<span class="kw">list</span>(<span class="dv">2</span>,<span class="kw">c</span>(<span class="dv">1</span>,-<span class="dv">3</span>)),<span class="kw">list</span>(<span class="dv">0</span>)), 
+                 <span class="dt">seed=</span><span class="dv">234235</span>,<span class="dt">print=</span>F)
 
 <span class="co">#Pool results from linear regression from imputed datasets:</span>
-<span class="kw">pool</span>(<span class="kw">with</span>(impNARFCS,<span class="kw">lm</span>(Y~X)))$qbar</code></pre></div>
-<pre><code>## (Intercept)          X2 
-##   0.7805584  10.8163702</code></pre>
-<p>Note that no predictors have been specified for <span class="math inline">\(X\)</span> in this part of the imputation model. Hence, only an intercept shift will be included. If the user wants to exclude this intercept shift (i.e. exclude the unidentifiable part of the model altogether), then it suffices to set the corresponding sensitivity parameter to zero.</p>
-<p>If we extract the predictor matrix used for the unidentifiable part from the object returned by <code>mice</code>, we see the names of the colums are preceded by a colon (“:”).</p>
+<span class="kw">pool</span>(<span class="kw">with</span>(impNARFCS,<span class="kw">lm</span>(Y~X+Z)))$qbar</code></pre></div>
+<pre><code>## (Intercept)          X2          Z2          Z3 
+##   19.040240    3.314205  -14.497868  -28.276516</code></pre>
+<p>Note that no predictors have been specified for <span class="math inline">\(X\)</span> in this part of the imputation model. Hence, only an intercept shift will be included.</p>
+<p>If we extract the <code>predictorSens</code> matrix from the object returned by <code>mice</code>, we see that the names of the columns are preceded by a colon (“:”), and this will be the case even if we do not pre-specify these names ourselves as in the code above.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">impNARFCS$predictorSens</code></pre></div>
-<pre><code>##    :X :Y :Mx :My
-## X   0  0   0   0
-## Y   1  0   0   0
-## Mx  0  0   0   0
-## My  0  0   0   0</code></pre>
-<p>These names highlight that, contrary to the terms in <code>predictorMatrix</code>, the terms in <code>predictorSens</code> formally come into the model only as an interaction with the missingness indicator (i.e. only for the missing data) as described above.</p>
+<pre><code>##   :X :Y :Z
+## X  0  0  0
+## Y  0  0  1
+## Z  0  0  0</code></pre>
+<p>These names highlight that, contrary to the terms in <code>predictorMatrix</code>, the terms in <code>predictorSens</code> formally come into the model only as an interaction with the missingness indicator (i.e. only for the missing data) as described previously.</p>
 </div>
 <div id="formula-syntax-for-narfcs" class="section level4">
 <h4>Formula syntax for NARFCS</h4>
 <p>With the formula syntax, the analysis is performed as follows:</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># NARFCS analysis using formula syntax</span>
-impNARFCS&lt;-<span class="kw">mice</span>(datmis,<span class="dt">m=</span><span class="dv">5</span>, <span class="dt">method=</span><span class="kw">c</span>(<span class="st">&quot;logregSens&quot;</span>,<span class="st">&quot;normSens&quot;</span>,<span class="st">&quot;&quot;</span>,<span class="st">&quot;&quot;</span>),  <span class="dt">form=</span><span class="kw">c</span>(<span class="st">&quot;~1+Y&quot;</span>,<span class="st">&quot;~1+X&quot;</span>,<span class="st">&quot;&quot;</span>,<span class="st">&quot;&quot;</span>),
-                  <span class="dt">formSens=</span><span class="kw">c</span>(<span class="st">&quot;~1&quot;</span>,<span class="st">&quot;~1+X&quot;</span>,<span class="st">&quot;&quot;</span>,<span class="st">&quot;&quot;</span>), <span class="dt">parmSens=</span><span class="kw">list</span>(<span class="kw">c</span>(-<span class="dv">4</span>),<span class="kw">c</span>(<span class="dv">2</span>,<span class="dv">5</span>)), <span class="dt">seed=</span><span class="dv">234235</span>,<span class="dt">print=</span>F)
+impNARFCS&lt;-<span class="kw">mice</span>(datmis,<span class="dt">m=</span><span class="dv">5</span>, <span class="dt">method=</span><span class="kw">c</span>(<span class="st">&quot;logregSens&quot;</span>,<span class="st">&quot;normSens&quot;</span>,<span class="st">&quot;&quot;</span>),  <span class="dt">form=</span><span class="kw">c</span>(<span class="st">&quot;~1+Y+Z&quot;</span>,<span class="st">&quot;~1+X+Z&quot;</span>,<span class="st">&quot;&quot;</span>),
+                  <span class="dt">formSens=</span><span class="kw">c</span>(<span class="st">&quot;~1&quot;</span>,<span class="st">&quot;~1+Z&quot;</span>,<span class="st">&quot;&quot;</span>), <span class="dt">parmSens=</span><span class="kw">list</span>(<span class="kw">list</span>(-<span class="dv">4</span>),<span class="kw">list</span>(<span class="dv">2</span>,<span class="kw">c</span>(<span class="dv">1</span>,-<span class="dv">3</span>)),<span class="kw">list</span>(<span class="dv">0</span>)), 
+                  <span class="dt">seed=</span><span class="dv">234235</span>,<span class="dt">print=</span>F)
 
 <span class="co">#Pool results from linear regression from imputed datasets:</span>
-<span class="kw">pool</span>(<span class="kw">with</span>(impNARFCS,<span class="kw">lm</span>(Y~X)))$qbar</code></pre></div>
-<pre><code>## (Intercept)          X2 
-##   0.7805584  10.8163702</code></pre>
-</div>
-<div id="a-note-on-interactions" class="section level4">
-<h4>A note on interactions</h4>
-<p>When including interactions between predictors in the unidentifiable part of the model, similar issues arise as in the typical FCS analysis. Specifically, using the matrix syntax, the user must use passive imputation and carefully set up the visiting sequence as described by <a href="https://www.jstatsoft.org/article/view/v045i03/v45i03.pdf">van Buuren and Groothuis-Oudshoorn (2011)</a>. The passive imputation requires in particular adding the variable(s) representing the interaction term (e.g. the product in the case of two continuous variables) to the dataset prior to calling <code>mice</code>.</p>
-<p>With the formula syntax none of this is required as the interaction term can be specified directly in the formula. In this case the two approaches will however yield slighlty different results (even when using the same seed) because the random values used to initialise missing values of the interaction variable (used by the matrix syntax) will be different to the product of the random values used to initialise missing values of the interacting variables (used by the formula syntax).</p>
+<span class="kw">pool</span>(<span class="kw">with</span>(impNARFCS,<span class="kw">lm</span>(Y~X+Z)))$qbar</code></pre></div>
+<pre><code>## (Intercept)          X2          Z2          Z3 
+##   19.357351    3.457046  -15.519064  -28.400211</code></pre>
+<p>As with the matrix syntax, only an intercept shift will be included for <span class="math inline">\(X\)</span> in the unidentifiable part of the model since no other predictors have been specified. This is however made more explicit with the formula syntax by the specification of the non-empty formula <code>&quot;~1&quot;</code>.</p>
+<p><strong>Note 2:</strong> When including interactions between predictors in the unidentifiable part of the model, similar issues arise as in the typical FCS analysis. Specifically, using the matrix syntax, the user must use passive imputation and carefully specify the visiting sequence as described by <a href="https://www.jstatsoft.org/article/view/v045i03/v45i03.pdf">van Buuren and Groothuis-Oudshoorn (2011)</a>. The passive imputation requires in particular adding the variable(s) representing the interaction term (e.g. the product in the case of two continuous variables) to the dataset prior to calling <code>mice</code>. With the formula syntax none of this is required as the interaction term can be specified directly in the formula. In this case the two approaches will yield slightly different results (even when using the same seed) because the random values used to initialise missing values of the interaction variable (used by the matrix syntax) will be different to the product of the random values used to initialise missing values of the interacting variables (used by the formula syntax).</p>
 </div>
 </div>
 </div>
 <div id="references" class="section level2">
 <h2>References</h2>
-<p>Leacy FP. Multiple imputation under missing not at random assumptions via fully conditional specification 2016 (PhD thesis).</p>
+<p>Leacy FP. <em>Multiple imputation under missing not at random assumptions via fully conditional specification</em> (PhD thesis). University of Cambridge, 2016.</p>
 <p>Tompsett D, Leacy FP, Moreno-Betancur M, White IR. On the use of the not at random fully conditional specification procedure (NARFCS) in practice (in preparation).</p>
 <p><a href="https://www.jstatsoft.org/article/view/v045i03/v45i03.pdf">van Buuren S, Groothuis-Oudshoorn K.</a> mice: Multivariate Imputation by Chained Equations in R. <em>Journal of Statistical Software</em> 2011; 45(3), 1-67.</p>
 <p><a href="http://journals.sagepub.com/doi/abs/10.1177/0962280213490014">Moreno-Betancur M, Chavance M.</a> Sensitivity analysis of incomplete longitudinal data departing from the missing at random assumption: Methodology and application in a clinical trial with drop-outs. <em>Statistical Methods in Medical Research</em> 2016; 25(4) 1471-1489.</p>
-<p><a href="https://academic.oup.com/aje/article-lookup/doi/10.1093/aje/kww107">Leacy FP, Floyd S, Yates TA, White IR.</a> Analyses of Sensitivity to the Missing-at-Random Assumption Using Multiple Imputation With Delta Adjustment: Application to a Tuberculosis/HIV Prevalence Survey With Incomplete HIV-Status Data. <em>American Journal of Epidemiology</em>, 185(4):304-315.</p>
+<p><a href="https://academic.oup.com/aje/article-lookup/doi/10.1093/aje/kww107">Leacy FP, Floyd S, Yates TA, White IR.</a> Analyses of Sensitivity to the Missing-at-Random Assumption Using Multiple Imputation With Delta Adjustment: Application to a Tuberculosis/HIV Prevalence Survey With Incomplete HIV-Status Data. <em>American Journal of Epidemiology</em> 2017, 185(4):304-315.</p>
 <p><a href="http://onlinelibrary.wiley.com/doi/10.1111/biom.12295/full">Moreno-Betancur M, Rey G, Latouche A.</a> Direct likelihood inference and sensitivity analysis for competing risks regression with missing causes of failure. <em>Biometrics</em> 2015; 71(2):498-507.</p>
 <div id="cite-this-document-as" class="section level4">
 <h4>Cite this document as:</h4>
