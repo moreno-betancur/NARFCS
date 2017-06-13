@@ -136,7 +136,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 
 <span class="co">#Set-up predictor matrix</span>
 predMatrix&lt;-<span class="kw">matrix</span>(<span class="kw">rep</span>(<span class="dv">0</span>,<span class="dv">9</span>),<span class="dt">ncol=</span><span class="dv">3</span>)
-<span class="kw">colnames</span>(predMatrix)&lt;-<span class="kw">rownames</span>(predMatrix)&lt;-<span class="kw">c</span>(<span class="st">&quot;X&quot;</span>,<span class="st">&quot;Y&quot;</span>,<span class="st">&quot;Z&quot;</span>)
+<span class="kw">colnames</span>(predMatrix)&lt;-<span class="kw">rownames</span>(predMatrix)&lt;-<span class="kw">names</span>(datmis)
 predMatrix[<span class="st">&quot;X&quot;</span>,]&lt;-<span class="kw">c</span>(<span class="dv">0</span>,<span class="dv">1</span>,<span class="dv">1</span>)
 predMatrix[<span class="st">&quot;Y&quot;</span>,]&lt;-<span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">0</span>,<span class="dv">1</span>)
 
@@ -179,7 +179,14 @@ impFCS&lt;-<span class="kw">mice</span>(datmis,<span class="dt">m=</span><span c
 <h3>NARFCS univariate imputation models</h3>
 <p>NARFCS (Leacy 2016) is a generalisation to the case with multiple incomplete variables of the so-called <em>delta-adjustment</em> method for sensitivity analyses. In the case of one incomplete variable, we have previously used the method both for continuous (<a href="http://journals.sagepub.com/doi/abs/10.1177/0962280213490014">Moreno-Betancur and Chavance, 2016</a>) and binary (<a href="https://academic.oup.com/aje/article-lookup/doi/10.1093/aje/kww107">Leacy et al. 2017</a>; <a href="http://onlinelibrary.wiley.com/doi/10.1111/biom.12295/full">Moreno-Betancur et al. 2015</a>) variables, and various other examples exist in the literature.</p>
 <p>A sensitivity analysis using the NARFCS procedure aims at shifting the imputations drawn at each iteration by a constant or, more generally, by a quantity determined by a linear combination of the variables already included in the imputation model. When imputing a binary variable, it is the linear predictor of the imputation model that is shifted prior to drawing the imputed value.</p>
-<p>Since only the imputed values are shifted, and not the observed, this shift only concerns individuals with the corresponding value missing. T</p>
+<p>Since only the imputed values are shifted, and not the observed, this shift only concerns individuals with the corresponding value missing. That is, if <span class="math inline">\(M_X\)</span> and <span class="math inline">\(M_Y\)</span> denote the missingness indicators of <span class="math inline">\(X\)</span> and <span class="math inline">\(Y\)</span> (i.e. <span class="math inline">\(M_X=1\)</span> if <span class="math inline">\(X\)</span> is missing and <span class="math inline">\(M_X=0\)</span> otherwise, and similarly for <span class="math inline">\(M_Y\)</span>) then the shift concerns only individuals with <span class="math inline">\(M_X=1\)</span> if <span class="math inline">\(X\)</span> is being imputed, and <span class="math inline">\(M_Y=1\)</span> if <span class="math inline">\(Y\)</span> is being imputed. Formally, this amounts to specifying, for each incomplete variable, a univariate imputation model with an additional term representing an interaction between the missingness indicator and the chosen linear combination for the shift. In our example, this could be as follows:</p>
+<span class="math display">\[\begin{align}
+\text{logit}\{E(X|Y,Z,M_X)\} =&amp;\underbrace{\beta_{X0}+ \beta_{XY} Y+ \beta_{XZ_{1}} Z_1+\beta_{XZ_{2}} Z_2}_{\text{IDENTIFIABLE PART}}\\ &amp;+\underbrace{M_X*(\delta_{X0}+\delta_{XY}Y+\delta_{XZ_1}Z_1+\delta_{XZ_2}Z_2)}_\text{UNIDENTIFIABLE PART}.
+\end{align}\]</span>
+<p>and</p>
+<p><span class="math display">\[ E(Y|X,M_Y)=\underbrace{\beta_{Y0}+ \beta_{YX} X + \beta_{YZ_{1}} Z_1+\beta_{YZ_{2}} Z_2}_{\text{IDENTIFIABLE PART}} +\underbrace{M_Y*(\delta_{Y0}+\delta_{YX}X+\delta_{YZ_1}Z_1+\delta_{YZ_2}Z_2)}_\text{UNIDENTIFIABLE PART}.\]</span></p>
+<p>The <span class="math inline">\(\delta\)</span>-parameters that make up the linear combination in the shifts are called <em>sensitivity parameters</em>. These values describe the way in which the distribution of the missing data departs from that of the observed data, and as such are not estimable from the observed data, that is, they are unidentifiable. Thus, the NARFCS model consists of an identifiable part, with <span class="math inline">\(\beta\)</span>-parameters estimated from observed data, and an unidentifiable part, with <span class="math inline">\(\delta\)</span>- (sensitivity) parameters.</p>
+<p>Typically, plausible ranges for the latter would be elicited from experts. Tompsett et al. (in preparation) provide a detailed study of the issue of sensitivity parameter elicitation in NARFCS, including methodology and guidelines. It is important to note here that sensitivity parameters must be specified on the log-odds scale when imputing a binary variable.</p>
 <p>Of course, given that each sensitivity parameter will be varied across a range of values, for the sake of parsimony we will often assume that many of the <span class="math inline">\(\delta\)</span>-parameters are zero (i.e. exclude the term from the unidentifiable part), and we will vary only a key subset of them across a range of non-zero values according to the context and target parameter of interest. Indeed, each set of values for the set of sensitivity parameters will yield one set of results for the analysis. Thus, a key aspect of sensitivity analyses is how to process and report the large volume of results that arises from these analyses. This is beyond the scope of this document and we refer the reader to the aforementioned references for some examples.</p>
 <p>Here, we show how to perform the NARFCS analysis with <code>mice</code> for one given set of values for the <span class="math inline">\(\delta\)</span>-parameters in our example. Specifically, in the model for <span class="math inline">\(X\)</span>, we set <span class="math inline">\(\delta_{X0}=-4\)</span> and <span class="math inline">\(\delta_{XY}=\delta_{XZ_1}=\delta_{XZ_2}=0\)</span>; that is, all terms except the intercept are excluded, so the shift when imputing <span class="math inline">\(X\)</span> is just a constant. For <span class="math inline">\(Y\)</span>, we set <span class="math inline">\(\delta_{Y0}=2\)</span>, <span class="math inline">\(\delta_{YX}=0\)</span> (i.e. the <span class="math inline">\(X\)</span>-term is excluded), <span class="math inline">\(\delta_{YZ_1}=1\)</span> and <span class="math inline">\(\delta_{YZ_2}=-3\)</span>.</p>
 </div>
@@ -193,16 +200,15 @@ impFCS&lt;-<span class="kw">mice</span>(datmis,<span class="dt">m=</span><span c
 </ol>
 <ul>
 <li><p>For variables in the dataset that are complete or to be imputed via standard FCS, the corresponding element is a list with 0 as unique element, i.e. <code>list(0)</code> (this is the default for all variables).</p></li>
-<li><p>For variables to be imputed via NARFCS, it is a list of length equal to 1 (for the intercept) plus the number of variables included as predictors in the unidentifiable part of the imputation model, as specified through <code>predictorSens</code> or <code>formSens</code>. The first component is the sensitivity parameter corresponding to the intercept term, which is always included, and is thus a scalar (i.e. a vector of length 1). The following components are sensitivity parameter vectors, of length 1 except for factors (see below), corresponding to each of the predictor variables. If using the matrix syntax, these must be provided in the order in which they appear in the dataset (which is the order in which they appear in the matrix). If using the formula syntax, they are provided in the order in which they appear in the corresponding formula. For a factor predictor variable with <span class="math inline">\(K\)</span> categories, the element is a vector of length <span class="math inline">\(K-1\)</span> containing the sensitivity parameters for the <span class="math inline">\(K-1\)</span> indicator variables of the non-reference categories, following the order of the levels of that factor variable (see related <strong>Note 1</strong> above). These parameters are interpreted relative to the reference category, as usual. As a reminder, sensitivity parameters must be specified in the log-odds scale when imputing a binary variable (<code>&quot;logregSens&quot;</code> method).</p></li>
+<li><p>For variables to be imputed via NARFCS, it is a list of length equal to 1 (for the intercept) plus the number of variables included as predictors in the unidentifiable part of the imputation model, as specified through <code>predictorSens</code> or <code>formSens</code>. The first component is the sensitivity parameter corresponding to the intercept term, which is always included, and is thus a scalar (i.e. a vector of length 1). The following components are sensitivity parameter vectors, of length 1 except for factors (see below), corresponding to ea</p></li>
 </ul>
-<p>Since the specification of the <code>parmSens</code> argument is delicate, the program runs various checks to verify that the lengths of the lists and vectors are consistent with what was provided through <code>predictorSens</code> or <code>formSens</code> arguments, and provides informative error messages if this is not the case. When the procedure runs successfully and <code>printFlag=TRUE</code> (the default), the sensitivity parameters used for each predictor variable/factor level in each imputation model are printed out on the console so that the user can check that these correspond to what was intended. Carefully checking this output is highly recommended.</p>
 <p>We will now illustrate how, together, these three steps allow us to apply NARFCS in our example using each possible syntax.</p>
 <div id="matrix-syntax-for-narfcs" class="section level4">
 <h4>Matrix syntax for NARFCS</h4>
 <p>Using the matrix syntax, the NARFCS procedure with the above models and choice of parameters is performed as follows:</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co">#Set-up predictor matrix for identifiable part as before:</span>
 predMatrix&lt;-<span class="kw">matrix</span>(<span class="kw">rep</span>(<span class="dv">0</span>,<span class="dv">9</span>),<span class="dt">ncol=</span><span class="dv">3</span>)
-<span class="kw">colnames</span>(predMatrix)&lt;-<span class="kw">rownames</span>(predMatrix)&lt;-<span class="kw">c</span>(<span class="st">&quot;X&quot;</span>,<span class="st">&quot;Y&quot;</span>,<span class="st">&quot;Z&quot;</span>)
+<span class="kw">colnames</span>(predMatrix)&lt;-<span class="kw">rownames</span>(predMatrix)&lt;-<span class="kw">names</span>(datmis)
 predMatrix[<span class="st">&quot;X&quot;</span>,]&lt;-<span class="kw">c</span>(<span class="dv">0</span>,<span class="dv">1</span>,<span class="dv">1</span>)
 predMatrix[<span class="st">&quot;Y&quot;</span>,]&lt;-<span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">0</span>,<span class="dv">1</span>)
 
@@ -213,8 +219,8 @@ predMatrix</code></pre></div>
 ## Z 0 0 0</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co">#Set-up predictor matrix for unidentifiable part:</span>
 predSens&lt;-<span class="kw">matrix</span>(<span class="kw">rep</span>(<span class="dv">0</span>,<span class="dv">9</span>),<span class="dt">ncol=</span><span class="dv">3</span>)
-<span class="kw">colnames</span>(predSens)&lt;-<span class="kw">c</span>(<span class="st">&quot;:X&quot;</span>,<span class="st">&quot;:Y&quot;</span>,<span class="st">&quot;:Z&quot;</span>)
-<span class="kw">rownames</span>(predSens)&lt;-<span class="kw">c</span>(<span class="st">&quot;X&quot;</span>,<span class="st">&quot;Y&quot;</span>,<span class="st">&quot;Z&quot;</span>)
+<span class="kw">colnames</span>(predSens)&lt;-<span class="kw">paste</span>(<span class="st">&quot;:&quot;</span>,<span class="kw">names</span>(datmis),<span class="dt">sep=</span><span class="st">&quot;&quot;</span>)
+<span class="kw">rownames</span>(predSens)&lt;-<span class="kw">names</span>(datmis)
 
 predSens[<span class="st">&quot;X&quot;</span>,]&lt;-<span class="kw">c</span>(<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>)
 predSens[<span class="st">&quot;Y&quot;</span>,]&lt;-<span class="kw">c</span>(<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">1</span>)
@@ -224,10 +230,33 @@ predSens</code></pre></div>
 ## X  0  0  0
 ## Y  0  0  1
 ## Z  0  0  0</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co">#Set-up list with sensitivity parameter values</span>
+
+pSens&lt;-<span class="kw">rep</span>(<span class="kw">list</span>(<span class="kw">list</span>(<span class="dv">0</span>)), <span class="kw">ncol</span>(datmis))
+<span class="kw">names</span>(pSens)&lt;-<span class="kw">names</span>(datmis)
+pSens[[<span class="st">&quot;X&quot;</span>]]&lt;-<span class="kw">list</span>(-<span class="dv">4</span>)
+pSens[[<span class="st">&quot;Y&quot;</span>]]&lt;-<span class="kw">list</span>(<span class="dv">2</span>,<span class="kw">c</span>(<span class="dv">1</span>,-<span class="dv">3</span>))
+
+pSens</code></pre></div>
+<pre><code>## $X
+## $X[[1]]
+## [1] -4
+## 
+## 
+## $Y
+## $Y[[1]]
+## [1] 2
+## 
+## $Y[[2]]
+## [1]  1 -3
+## 
+## 
+## $Z
+## $Z[[1]]
+## [1] 0</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># NARFCS analysis using matrix syntax</span>
 impNARFCS&lt;-<span class="kw">mice</span>(datmis,<span class="dt">m=</span><span class="dv">5</span>, <span class="dt">method=</span><span class="kw">c</span>(<span class="st">&quot;logregSens&quot;</span>,<span class="st">&quot;normSens&quot;</span>,<span class="st">&quot;&quot;</span>), <span class="dt">predictorMatrix=</span>predMatrix,
-                 <span class="dt">predictorSens=</span>predSens, <span class="dt">parmSens=</span><span class="kw">list</span>(<span class="kw">list</span>(-<span class="dv">4</span>),<span class="kw">list</span>(<span class="dv">2</span>,<span class="kw">c</span>(<span class="dv">1</span>,-<span class="dv">3</span>)),<span class="kw">list</span>(<span class="dv">0</span>)), 
-                 <span class="dt">seed=</span><span class="dv">234235</span>,<span class="dt">print=</span>F)
+                 <span class="dt">predictorSens=</span>predSens, <span class="dt">parmSens=</span>pSens, <span class="dt">seed=</span><span class="dv">234235</span>,<span class="dt">print=</span>F)
 
 <span class="co">#Pool results from linear regression from imputed datasets:</span>
 <span class="kw">pool</span>(<span class="kw">with</span>(impNARFCS,<span class="kw">lm</span>(Y~X+Z)))$qbar</code></pre></div>
@@ -247,8 +276,7 @@ impNARFCS&lt;-<span class="kw">mice</span>(datmis,<span class="dt">m=</span><spa
 <p>With the formula syntax, the analysis is performed as follows:</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># NARFCS analysis using formula syntax</span>
 impNARFCS&lt;-<span class="kw">mice</span>(datmis,<span class="dt">m=</span><span class="dv">5</span>, <span class="dt">method=</span><span class="kw">c</span>(<span class="st">&quot;logregSens&quot;</span>,<span class="st">&quot;normSens&quot;</span>,<span class="st">&quot;&quot;</span>),  <span class="dt">form=</span><span class="kw">c</span>(<span class="st">&quot;~1+Y+Z&quot;</span>,<span class="st">&quot;~1+X+Z&quot;</span>,<span class="st">&quot;&quot;</span>),
-                  <span class="dt">formSens=</span><span class="kw">c</span>(<span class="st">&quot;~1&quot;</span>,<span class="st">&quot;~1+Z&quot;</span>,<span class="st">&quot;&quot;</span>), <span class="dt">parmSens=</span><span class="kw">list</span>(<span class="kw">list</span>(-<span class="dv">4</span>),<span class="kw">list</span>(<span class="dv">2</span>,<span class="kw">c</span>(<span class="dv">1</span>,-<span class="dv">3</span>)),<span class="kw">list</span>(<span class="dv">0</span>)), 
-                  <span class="dt">seed=</span><span class="dv">234235</span>,<span class="dt">print=</span>F)
+                  <span class="dt">formSens=</span><span class="kw">c</span>(<span class="st">&quot;~1&quot;</span>,<span class="st">&quot;~1+Z&quot;</span>,<span class="st">&quot;&quot;</span>), <span class="dt">parmSens=</span>pSens, <span class="dt">seed=</span><span class="dv">234235</span>,<span class="dt">print=</span>F)
 
 <span class="co">#Pool results from linear regression from imputed datasets:</span>
 <span class="kw">pool</span>(<span class="kw">with</span>(impNARFCS,<span class="kw">lm</span>(Y~X+Z)))$qbar</code></pre></div>

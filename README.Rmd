@@ -74,7 +74,7 @@ library(mice)
 
 #Set-up predictor matrix
 predMatrix<-matrix(rep(0,9),ncol=3)
-colnames(predMatrix)<-rownames(predMatrix)<-c("X","Y","Z")
+colnames(predMatrix)<-rownames(predMatrix)<-names(datmis)
 predMatrix["X",]<-c(0,1,1)
 predMatrix["Y",]<-c(1,0,1)
 
@@ -156,7 +156,7 @@ Using the matrix syntax, the NARFCS procedure with the above models and choice o
 ```{r}
 #Set-up predictor matrix for identifiable part as before:
 predMatrix<-matrix(rep(0,9),ncol=3)
-colnames(predMatrix)<-rownames(predMatrix)<-c("X","Y","Z")
+colnames(predMatrix)<-rownames(predMatrix)<-names(datmis)
 predMatrix["X",]<-c(0,1,1)
 predMatrix["Y",]<-c(1,0,1)
 
@@ -164,18 +164,26 @@ predMatrix
 
 #Set-up predictor matrix for unidentifiable part:
 predSens<-matrix(rep(0,9),ncol=3)
-colnames(predSens)<-c(":X",":Y",":Z")
-rownames(predSens)<-c("X","Y","Z")
+colnames(predSens)<-paste(":",names(datmis),sep="")
+rownames(predSens)<-names(datmis)
 
 predSens["X",]<-c(0,0,0)
 predSens["Y",]<-c(0,0,1)
 
 predSens
 
+#Set-up list with sensitivity parameter values
+
+pSens<-rep(list(list(0)), ncol(datmis))
+names(pSens)<-names(datmis)
+pSens[["X"]]<-list(-4)
+pSens[["Y"]]<-list(2,c(1,-3))
+
+pSens
+
 # NARFCS analysis using matrix syntax
 impNARFCS<-mice(datmis,m=5, method=c("logregSens","normSens",""), predictorMatrix=predMatrix,
-                 predictorSens=predSens, parmSens=list(list(-4),list(2,c(1,-3)),list(0)), 
-                 seed=234235,print=F)
+                 predictorSens=predSens, parmSens=pSens, seed=234235,print=F)
 
 #Pool results from linear regression from imputed datasets:
 pool(with(impNARFCS,lm(Y~X+Z)))$qbar
@@ -195,8 +203,7 @@ With the formula syntax, the analysis is performed as follows:
 ```{r}
 # NARFCS analysis using formula syntax
 impNARFCS<-mice(datmis,m=5, method=c("logregSens","normSens",""),  form=c("~1+Y+Z","~1+X+Z",""),
-                  formSens=c("~1","~1+Z",""), parmSens=list(list(-4),list(2,c(1,-3)),list(0)), 
-                  seed=234235,print=F)
+                  formSens=c("~1","~1+Z",""), parmSens=pSens, seed=234235,print=F)
 
 #Pool results from linear regression from imputed datasets:
 pool(with(impNARFCS,lm(Y~X+Z)))$qbar

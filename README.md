@@ -103,7 +103,7 @@ library(mice)
 
 #Set-up predictor matrix
 predMatrix<-matrix(rep(0,9),ncol=3)
-colnames(predMatrix)<-rownames(predMatrix)<-c("X","Y","Z")
+colnames(predMatrix)<-rownames(predMatrix)<-names(datmis)
 predMatrix["X",]<-c(0,1,1)
 predMatrix["Y",]<-c(1,0,1)
 
@@ -175,7 +175,19 @@ NARFCS (Leacy 2016) is a generalisation to the case with multiple incomplete var
 
 A sensitivity analysis using the NARFCS procedure aims at shifting the imputations drawn at each iteration by a constant or, more generally, by a quantity determined by a linear combination of the variables already included in the imputation model. When imputing a binary variable, it is the linear predictor of the imputation model that is shifted prior to drawing the imputed value.
 
-Since only the imputed values are shifted, and not the observed, this shift only concerns individuals with the corresponding value missing. T
+Since only the imputed values are shifted, and not the observed, this shift only concerns individuals with the corresponding value missing. That is, if $M_X$ and $M_Y$ denote the missingness indicators of $X$ and $Y$ (i.e. $M_X=1$ if $X$ is missing and $M_X=0$ otherwise, and similarly for $M_Y$) then the shift concerns only individuals with $M_X=1$ if $X$ is being imputed, and $M_Y=1$ if $Y$ is being imputed. Formally, this amounts to specifying, for each incomplete variable, a univariate imputation model with an additional term representing an interaction between the missingness indicator and the chosen linear combination for the shift. In our example, this could be as follows:
+
+\begin{align}
+\text{logit}\{E(X|Y,Z,M_X)\} =&\underbrace{\beta_{X0}+ \beta_{XY} Y+ \beta_{XZ_{1}} Z_1+\beta_{XZ_{2}} Z_2}_{\text{IDENTIFIABLE PART}}\\ &+\underbrace{M_X*(\delta_{X0}+\delta_{XY}Y+\delta_{XZ_1}Z_1+\delta_{XZ_2}Z_2)}_\text{UNIDENTIFIABLE PART}.
+\end{align}
+
+and 
+
+$$ E(Y|X,M_Y)=\underbrace{\beta_{Y0}+ \beta_{YX} X + \beta_{YZ_{1}} Z_1+\beta_{YZ_{2}} Z_2}_{\text{IDENTIFIABLE PART}} +\underbrace{M_Y*(\delta_{Y0}+\delta_{YX}X+\delta_{YZ_1}Z_1+\delta_{YZ_2}Z_2)}_\text{UNIDENTIFIABLE PART}.$$
+
+The $\delta$-parameters that make up the linear combination in the shifts are called *sensitivity parameters*. These values describe the way in which the distribution of the missing data departs from that of the observed data, and as such are not estimable from the observed data, that is, they are unidentifiable. Thus, the NARFCS model consists of an identifiable part, with $\beta$-parameters estimated from observed data, and an unidentifiable part, with $\delta$- (sensitivity) parameters. 
+
+Typically, plausible ranges for the latter would be elicited from experts. Tompsett et al. (in preparation) provide a detailed study of the issue of sensitivity parameter elicitation in NARFCS, including methodology and guidelines. It is important to note here that sensitivity parameters must be specified on the log-odds scale when imputing a binary variable.
 
 Of course, given that each sensitivity parameter will be varied across a range of values, for the sake of parsimony we will often assume that many of the $\delta$-parameters are zero (i.e. exclude the term from the unidentifiable part), and we will vary only a key subset of them across a range of non-zero values according to the context and target parameter of interest. Indeed, each set of values for the set of sensitivity parameters will yield one set of results for the analysis. Thus, a key aspect of sensitivity analyses is how to process and report the large volume of results that arises from these analyses. This is beyond the scope of this document and we refer the reader to the aforementioned references for some examples. 
 
@@ -206,7 +218,7 @@ Using the matrix syntax, the NARFCS procedure with the above models and choice o
 ```r
 #Set-up predictor matrix for identifiable part as before:
 predMatrix<-matrix(rep(0,9),ncol=3)
-colnames(predMatrix)<-rownames(predMatrix)<-c("X","Y","Z")
+colnames(predMatrix)<-rownames(predMatrix)<-names(datmis)
 predMatrix["X",]<-c(0,1,1)
 predMatrix["Y",]<-c(1,0,1)
 
@@ -223,8 +235,8 @@ predMatrix
 ```r
 #Set-up predictor matrix for unidentifiable part:
 predSens<-matrix(rep(0,9),ncol=3)
-colnames(predSens)<-c(":X",":Y",":Z")
-rownames(predSens)<-c("X","Y","Z")
+colnames(predSens)<-paste(":",names(datmis),sep="")
+rownames(predSens)<-names(datmis)
 
 predSens["X",]<-c(0,0,0)
 predSens["Y",]<-c(0,0,1)
@@ -240,10 +252,39 @@ predSens
 ```
 
 ```r
+#Set-up list with sensitivity parameter values
+
+pSens<-rep(list(list(0)), ncol(datmis))
+names(pSens)<-names(datmis)
+pSens[["X"]]<-list(-4)
+pSens[["Y"]]<-list(2,c(1,-3))
+
+pSens
+```
+
+```
+## $X
+## $X[[1]]
+## [1] -4
+## 
+## 
+## $Y
+## $Y[[1]]
+## [1] 2
+## 
+## $Y[[2]]
+## [1]  1 -3
+## 
+## 
+## $Z
+## $Z[[1]]
+## [1] 0
+```
+
+```r
 # NARFCS analysis using matrix syntax
 impNARFCS<-mice(datmis,m=5, method=c("logregSens","normSens",""), predictorMatrix=predMatrix,
-                 predictorSens=predSens, parmSens=list(list(-4),list(2,c(1,-3)),list(0)), 
-                 seed=234235,print=F)
+                 predictorSens=predSens, parmSens=pSens, seed=234235,print=F)
 
 #Pool results from linear regression from imputed datasets:
 pool(with(impNARFCS,lm(Y~X+Z)))$qbar
@@ -277,8 +318,7 @@ With the formula syntax, the analysis is performed as follows:
 ```r
 # NARFCS analysis using formula syntax
 impNARFCS<-mice(datmis,m=5, method=c("logregSens","normSens",""),  form=c("~1+Y+Z","~1+X+Z",""),
-                  formSens=c("~1","~1+Z",""), parmSens=list(list(-4),list(2,c(1,-3)),list(0)), 
-                  seed=234235,print=F)
+                  formSens=c("~1","~1+Z",""), parmSens=pSens, seed=234235,print=F)
 
 #Pool results from linear regression from imputed datasets:
 pool(with(impNARFCS,lm(Y~X+Z)))$qbar
