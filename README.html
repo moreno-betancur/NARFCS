@@ -82,9 +82,10 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 </div>
 <div id="installation-of-the-extension" class="section level2">
 <h2>Installation of the extension</h2>
-<p>The most up-to-date NARFCS extension of the package <code>mice</code> can be installed directly from GitHub using the <code>devtools</code> package, which must be first installed from CRAN by the user to proceed. Then it suffices to execute the following commands to install the NARFCS extension of <code>mice</code>:</p>
+<p>The currently recommended version of the NARFCS extension of the package <code>mice</code> can be installed directly from GitHub using the <code>devtools</code> package, which must be first installed from CRAN by the user to proceed. Then it suffices to execute the following commands to install the NARFCS extension of <code>mice</code>:</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(devtools)
-<span class="kw">install_github</span>(<span class="st">&quot;moreno-betancur/mice&quot;</span>)</code></pre></div>
+<span class="kw">install_github</span>(<span class="st">&quot;moreno-betancur/mice&quot;</span>, 
+<span class="dt">ref=</span><span class="st">&quot;f0e838f5a7fdfcfb9bfa27207e903d13d79cefaa&quot;</span>)</code></pre></div>
 </div>
 <div id="loading-and-looking-at-example-dataset" class="section level2">
 <h2>Loading and looking at example dataset</h2>
@@ -150,18 +151,7 @@ impFCS&lt;-<span class="kw">mice</span>(datmis,<span class="dt">m=</span><span c
 
 <span class="co">#Pool results from linear regression from imputed datasets:</span>
 <span class="kw">pool</span>(<span class="kw">with</span>(impFCS,<span class="kw">lm</span>(Y~X+Z)))$qbar</code></pre></div>
-<pre><code>## (Intercept)          X2          Z2          Z3 
-##   15.958084    6.594639  -13.450028  -26.004113</code></pre>
-<p><strong>Note 1</strong>: For categorical variables, the function <code>pool</code> names the coefficients in the output according to the rank of the category. Thus “X2” corresponds to the second category of <span class="math inline">\(X\)</span>, and “Z2” and “Z3” to the second and third category of <span class="math inline">\(Z\)</span>, respectively. It is thus important to note that, if not instructed otherwise, R automatically orders the levels of a factor with the reference level first and the rest following in alphabetical order. We can check the order of the levels of a factor variable using the <code>levels</code> function:</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">levels</span>(datmis$X)</code></pre></div>
-<pre><code>## [1] &quot;No&quot;  &quot;Yes&quot;</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">levels</span>(datmis$Z)</code></pre></div>
-<pre><code>## [1] &quot;Cat0&quot; &quot;Cat1&quot; &quot;Cat2&quot;</code></pre>
-<p>To set the desired reference level, the user can use the <code>relevel</code> function (see <code>?relevel</code>).</p>
-</div>
-<div id="formula-syntax-for-fcs" class="section level4">
-<h4>Formula syntax for FCS</h4>
-<p>The formula syntax is sometimes more straightforward to use, especially when it comes to interactions (though for now we have none - see <strong>Note 2</strong> below). Each imputation model is specified using a formula in the same manner used for specifying models in R’s standard model-fitting functions:</p>
+<p>``` ## (Intercept) X2 Z2 Z3 ## 15.958084 6.594639 -13.450</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co">#FCS analysis using formula syntax</span>
 impFCS&lt;-<span class="kw">mice</span>(datmis,<span class="dt">m=</span><span class="dv">5</span>, <span class="dt">method=</span><span class="kw">c</span>(<span class="st">&quot;logreg&quot;</span>,<span class="st">&quot;norm&quot;</span>,<span class="st">&quot;&quot;</span>), <span class="dt">form=</span><span class="kw">c</span>(<span class="st">&quot;~1+Y+Z&quot;</span>,<span class="st">&quot;~1+X+Z&quot;</span>,<span class="st">&quot;&quot;</span>),<span class="dt">seed=</span><span class="dv">234235</span>,<span class="dt">print=</span>F)
 
@@ -255,50 +245,25 @@ pSens</code></pre></div>
 ## $Z
 ## $Z[[1]]
 ## [1] &quot;&quot;</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># NARFCS analysis using matrix syntax</span>
-impNARFCS&lt;-<span class="kw">mice</span>(datmis,<span class="dt">m=</span><span class="dv">5</span>, <span class="dt">method=</span><span class="kw">c</span>(<span class="st">&quot;logregSens&quot;</span>,<span class="st">&quot;normSens&quot;</span>,<span class="st">&quot;&quot;</span>), <span class="dt">predictorMatrix=</span>predMatrix,
-                 <span class="dt">predictorSens=</span>predSens, <span class="dt">parmSens=</span>pSens, <span class="dt">seed=</span><span class="dv">234235</span>,<span class="dt">print=</span>F)
-
-<span class="co">#Pool results from linear regression from imputed datasets:</span>
-<span class="kw">pool</span>(<span class="kw">with</span>(impNARFCS,<span class="kw">lm</span>(Y~X+Z)))$qbar</code></pre></div>
-<pre><code>## (Intercept)          X2          Z2          Z3 
-##   19.040240    3.314205  -14.497868  -28.276516</code></pre>
-<p>Note that no predictors have been specified for <span class="math inline">\(X\)</span> in this part of the imputation model. Hence, only an intercept shift will be included.</p>
-<p>If we extract the <code>predictorSens</code> matrix from the object returned by <code>mice</code>, we see that the names of the columns are preceded by a colon (“:”), and this will be the case even if we do not pre-specify these names ourselves as in the code above.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">impNARFCS$predictorSens</code></pre></div>
-<pre><code>##   :X :Y :Z
-## X  0  0  0
-## Y  0  0  1
-## Z  0  0  0</code></pre>
-<p>These names highlight that, contrary to the terms in <code>predictorMatrix</code>, the terms in <code>predictorSens</code> formally come into the model only as an interaction with the missingness indicator (i.e. only for the missing data) as described previously.</p>
-</div>
-<div id="formula-syntax-for-narfcs" class="section level4">
-<h4>Formula syntax for NARFCS</h4>
-<p>With the formula syntax, the analysis is performed as follows:</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># NARFCS analysis using formula syntax</span>
-impNARFCS&lt;-<span class="kw">mice</span>(datmis,<span class="dt">m=</span><span class="dv">5</span>, <span class="dt">method=</span><span class="kw">c</span>(<span class="st">&quot;logregSens&quot;</span>,<span class="st">&quot;normSens&quot;</span>,<span class="st">&quot;&quot;</span>),  <span class="dt">form=</span><span class="kw">c</span>(<span class="st">&quot;~1+Y+Z&quot;</span>,<span class="st">&quot;~1+X+Z&quot;</span>,<span class="st">&quot;&quot;</span>),
-                  <span class="dt">formSens=</span><span class="kw">c</span>(<span class="st">&quot;~1&quot;</span>,<span class="st">&quot;~1+Z&quot;</span>,<span class="st">&quot;&quot;</span>), <span class="dt">parmSens=</span>pSens, <span class="dt">seed=</span><span class="dv">234235</span>,<span class="dt">print=</span>F)
-
-<span class="co">#Pool results from linear regression from imputed datasets:</span>
-<span class="kw">pool</span>(<span class="kw">with</span>(impNARFCS,<span class="kw">lm</span>(Y~X+Z)))$qbar</code></pre></div>
-<pre><code>## (Intercept)          X2          Z2          Z3 
-##   19.357351    3.457046  -15.519064  -28.400211</code></pre>
-<p>As with the matrix syntax, only an intercept shift will be included for <span class="math inline">\(X\)</span> in the unidentifiable part of the model since no other predictors have been specified. This is however made more explicit with the formula syntax by the specification of the non-empty formula <code>&quot;~1&quot;</code>.</p>
-<p><strong>Note 2:</strong> When including interactions between predictors in the unidentifiable part of the model, similar issues arise as in the typical FCS analysis. Specifically, using the matrix syntax, the user must use passive imputation and carefully specify the visiting sequence as described by <a href="https://www.jstatsoft.org/article/view/v045i03/v45i03.pdf">van Buuren and Groothuis-Oudshoorn (2011)</a>. The passive imputation requires in particular adding the variable(s) representing the interaction term (e.g. the product in the case of two continuous variables) to the dataset prior to calling <code>mice</code>. With the formula syntax none of this is required as the interaction term can be specified directly in the formula. In this case the two approaches will yield slightly different results (even when using the same seed) because the random values used to initialise missing values of the interaction variable (used by the matrix syntax) will be different to the product of the random values used to initialise missing values of the interacting variables (used by the formula syntax).</p>
+<p>```r # NARFCS analysis using matrix syntax impNARFCS&lt;-mice(datmis,m=5, method=c(“logregSens”,“normSens”,“”), predictorMatrix=predMatrix, predictorSens=predSens, parmSens=pSens, seed=234235,print=F)</p>
 </div>
 </div>
 </div>
+<div id="pool-results-from-linear-regression-from" class="section level1">
+<h1>Pool results from linear regression from</h1>
+<p>With the formula syntax none of this is required as the interaction term can be specified directly in the formula. In this case the two approaches will yield slightly different results (even when using the same seed) because the random values used to initialise missing values of the interaction variable (used by the matrix syntax) will be different to the product of the random values used to initialise missing values of the interacting variables (used by the formula syntax).</p>
 <div id="references" class="section level2">
 <h2>References</h2>
 <p>Leacy FP. <em>Multiple imputation under missing not at random assumptions via fully conditional specification</em> (PhD thesis). University of Cambridge, 2016.</p>
-<p>Tompsett D, Leacy FP, Moreno-Betancur M, White IR. On the use of the not at random fully conditional specification procedure (NARFCS) in practice (in preparation).</p>
+<p><a href="https://onlinelibrary.wiley.com/doi/full/10.1002/sim.7643">Tompsett DM, Leacy FP, Moreno-Betancur M, Heron J, White IR.</a> On the use of the not at random fully conditional specification procedure (NARFCS) in practice. <em>Statistics in Medicine</em> 2018; Epub ahead of print 2 April 2018.</p>
 <p><a href="https://www.jstatsoft.org/article/view/v045i03/v45i03.pdf">van Buuren S, Groothuis-Oudshoorn K.</a> mice: Multivariate Imputation by Chained Equations in R. <em>Journal of Statistical Software</em> 2011; 45(3), 1-67.</p>
 <p><a href="http://journals.sagepub.com/doi/abs/10.1177/0962280213490014">Moreno-Betancur M, Chavance M.</a> Sensitivity analysis of incomplete longitudinal data departing from the missing at random assumption: Methodology and application in a clinical trial with drop-outs. <em>Statistical Methods in Medical Research</em> 2016; 25(4) 1471-1489.</p>
 <p><a href="https://academic.oup.com/aje/article-lookup/doi/10.1093/aje/kww107">Leacy FP, Floyd S, Yates TA, White IR.</a> Analyses of Sensitivity to the Missing-at-Random Assumption Using Multiple Imputation With Delta Adjustment: Application to a Tuberculosis/HIV Prevalence Survey With Incomplete HIV-Status Data. <em>American Journal of Epidemiology</em> 2017, 185(4):304-315.</p>
 <p><a href="http://onlinelibrary.wiley.com/doi/10.1111/biom.12295/full">Moreno-Betancur M, Rey G, Latouche A.</a> Direct likelihood inference and sensitivity analysis for competing risks regression with missing causes of failure. <em>Biometrics</em> 2015; 71(2):498-507.</p>
 <div id="cite-this-document-as" class="section level4">
 <h4>Cite this document as:</h4>
-<p>Moreno-Betancur M, Leacy FP, Tompsett D, White I. “mice: The NARFCS procedure for sensitivity analyses” (Available at: <a href="https://rawgit.com/moreno-betancur/NARFCS/master/README.html" class="uri">https://rawgit.com/moreno-betancur/NARFCS/master/README.html</a>)</p>
+<p>Moreno-Betancur M, Leacy FP, Tompsett D, White I. “mice: The NARFCS procedure for sensitivity analyses” (Available at: <a href="https://github.com/moreno-betancur/NARFCS" class="uri">https://github.com/moreno-betancur/NARFCS</a>)</p>
+</div>
 </div>
 </div>
 
@@ -309,7 +274,7 @@ impNARFCS&lt;-<span class="kw">mice</span>(datmis,<span class="dt">m=</span><spa
   (function () {
     var script = document.createElement("script");
     script.type = "text/javascript";
-    script.src  = "https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
     document.getElementsByTagName("head")[0].appendChild(script);
   })();
 </script>

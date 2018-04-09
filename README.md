@@ -15,11 +15,13 @@ Tompsett et al. (in preparation) provide recommendations for the application of 
 
 ## Installation of the extension
 
-The most up-to-date NARFCS extension of the package `mice` can be installed directly from GitHub using the `devtools` package, which must be first installed from CRAN by the user to proceed. Then it suffices to execute the following commands to install the NARFCS extension of `mice`:
+The currently recommended version of the NARFCS extension of the package `mice` can be installed directly from GitHub using the `devtools` package, which must be first installed from CRAN by the user to proceed. Then it suffices to execute the following commands to install the NARFCS extension of `mice`:
 
 ```r
 library(devtools)
-install_github("moreno-betancur/mice")
+install_github("moreno-betancur/mice", 
+ref="f0e838f5a7fdfcfb9bfa27207e903d13d79cefaa")
+
 ```
 
 ## Loading and looking at example dataset
@@ -338,8 +340,8 @@ With the formula syntax none of this is required as the interaction term can be 
 Leacy FP. *Multiple imputation under missing not at random assumptions via fully conditional 
 specification* (PhD thesis). University of Cambridge, 2016.
 
-Tompsett D, Leacy FP, Moreno-Betancur M, White IR. On the use of the not at random fully conditional
-specification procedure (NARFCS) in practice (in preparation).
+[Tompsett DM, Leacy FP, Moreno-Betancur M, Heron J, White IR.](https://onlinelibrary.wiley.com/doi/full/10.1002/sim.7643) On the use of the not at random fully conditional
+specification procedure (NARFCS) in practice. *Statistics in Medicine* 2018; Epub ahead of print 2 April 2018.
 
 [van Buuren S, Groothuis-Oudshoorn K.](https://www.jstatsoft.org/article/view/v045i03/v45i03.pdf) mice: Multivariate Imputation by Chained Equations in R. *Journal of Statistical Software* 2011; 45(3), 1-67.
 
@@ -351,4 +353,4 @@ specification procedure (NARFCS) in practice (in preparation).
 
 #### Cite this document as:
 
-Moreno-Betancur M, Leacy FP, Tompsett D, White I. "mice: The NARFCS procedure for sensitivity analyses" (Available at: https://rawgit.com/moreno-betancur/NARFCS/master/README.html)
+Moreno-Betancur M, Leacy FP, Tompsett D, White I. "mice: The NARFCS procedure for sensitivity analyses" (Available at: https://github.com/moreno-betancur/NARFCS)
