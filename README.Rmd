@@ -24,11 +24,13 @@ Tompsett et al. (in preparation) provide recommendations for the application of 
 
 ## Installation of the extension
 
-The most up-to-date NARFCS extension of the package `mice` can be installed directly from GitHub using the `devtools` package, which must be first installed from CRAN by the user to proceed. Then it suffices to execute the following commands to install the NARFCS extension of `mice`:
+The currently recommended version of the NARFCS extension of the package `mice` can be installed directly from GitHub using the `devtools` package, which must be first installed from CRAN by the user to proceed. Then it suffices to execute the following commands to install the NARFCS extension of `mice`:
 
 ```r
 library(devtools)
-install_github("moreno-betancur/mice")
+install_github("moreno-betancur/mice", 
+ref="f0e838f5a7fdfcfb9bfa27207e903d13d79cefaa")
+
 ```
 
 ## Loading and looking at example dataset
