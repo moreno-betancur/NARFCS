@@ -2,12 +2,8 @@
 title: "`mice`: The NARFCS procedure for sensitivity analyses"
 author: "M. Moreno-Betancur, F. Leacy, D. Tompsett, I. White"
 output: 
-  rmarkdown::html_vignette:
-    keep_md: true
-vignette: >
-  %\VignetteIndexEntry{"NARFCS"}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
+  rmarkdown::html_document:
+      keep_md: true
 ---
 
 This document illustrates how to perform sensitivity analyses using the Not At Random Fully Conditional Specification (NARFCS) procedure implemented in an extension of the R package `mice`. 
