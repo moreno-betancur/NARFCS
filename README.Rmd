@@ -28,13 +28,12 @@ The currently recommended version of the NARFCS extension of the package `mice` 
 
 ```r
 library(devtools)
-install_github("moreno-betancur/mice", 
-ref="f0e838f5a7fdfcfb9bfa27207e903d13d79cefaa")
+install_github("moreno-betancur/mice")
 
 ```
 
 ## Loading and looking at example dataset
-([click here if you see raw rather than compiled Latex formulas below](https://rawgit.com/moreno-betancur/NARFCS/master/README.html))
+([click here if you see raw rather than compiled Latex formulas below](https://raw.githack.com/moreno-betancur/NARFCS/master/README.html))
 
 To illustrate, we use a simulated dataset `datmis` (available for download [here](https://rawgit.com/moreno-betancur/NARFCS/master/datmis.csv)) which consists of: 
 
