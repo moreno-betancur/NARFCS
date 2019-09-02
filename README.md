@@ -1,5 +1,14 @@
-# `mice`: The NARFCS procedure for sensitivity analyses
-M. Moreno-Betancur, F. Leacy, D. Tompsett, I. White  
+---
+title: "`mice`: The NARFCS procedure for sensitivity analyses"
+author: "M. Moreno-Betancur, F. Leacy, D. Tompsett, I. White"
+output: 
+  rmarkdown::html_vignette:
+    keep_md: true
+vignette: >
+  %\VignetteIndexEntry{"NARFCS"}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
 
 This document illustrates how to perform sensitivity analyses using the Not At Random Fully Conditional Specification (NARFCS) procedure implemented in an extension of the R package `mice`. 
 
@@ -19,13 +28,12 @@ The currently recommended version of the NARFCS extension of the package `mice` 
 
 ```r
 library(devtools)
-install_github("moreno-betancur/mice", 
-ref="f0e838f5a7fdfcfb9bfa27207e903d13d79cefaa")
+install_github("moreno-betancur/mice")
 
 ```
 
 ## Loading and looking at example dataset
-([click here if you see raw rather than compiled Latex formulas below](https://rawgit.com/moreno-betancur/NARFCS/master/README.html))
+([click here if you see raw rather than compiled Latex formulas below](https://raw.githack.com/moreno-betancur/NARFCS/master/README.html))
 
 To illustrate, we use a simulated dataset `datmis` (available for download [here](https://rawgit.com/moreno-betancur/NARFCS/master/datmis.csv)) which consists of: 
 
@@ -67,7 +75,7 @@ summary(datmis)
 The variables $X$ and $Y$ are incomplete and $Z$ is complete, and it is easily verified that a *complete case* analysis would discard around 30\% of the records: 
 
 ```r
-100 * c(sum(is.na(datmis$X)), sum(is.na(datmis$Y)), sum(is.na(datmis$Z)))/nrow(datmis)
+100*c(sum(is.na(datmis$X)), sum(is.na(datmis$Y)),sum(is.na(datmis$Z)))/nrow(datmis)
 ```
 
 ```
@@ -75,7 +83,7 @@ The variables $X$ and $Y$ are incomplete and $Z$ is complete, and it is easily v
 ```
 
 ```r
-100 * sum(!is.na(datmis$X) & !is.na(datmis$Y) & !is.na(datmis$Z))/nrow(datmis)
+100*sum(!is.na(datmis$X)&!is.na(datmis$Y)&!is.na(datmis$Z))/nrow(datmis)
 ```
 
 ```
@@ -102,7 +110,13 @@ With the matrix syntax, the analysis requires specifying the predictors of each 
 
 ```r
 library(mice)
+```
 
+```
+## Loading required package: lattice
+```
+
+```r
 #Set-up predictor matrix
 predMatrix<-matrix(rep(0,9),ncol=3)
 colnames(predMatrix)<-rownames(predMatrix)<-names(datmis)
