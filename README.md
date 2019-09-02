@@ -75,7 +75,7 @@ summary(datmis)
 The variables $X$ and $Y$ are incomplete and $Z$ is complete, and it is easily verified that a *complete case* analysis would discard around 30\% of the records: 
 
 ```r
-100*c(sum(is.na(datmis$X)), sum(is.na(datmis$Y)),sum(is.na(datmis$Z)))/nrow(datmis)
+100 * c(sum(is.na(datmis$X)), sum(is.na(datmis$Y)), sum(is.na(datmis$Z)))/nrow(datmis)
 ```
 
 ```
@@ -83,7 +83,7 @@ The variables $X$ and $Y$ are incomplete and $Z$ is complete, and it is easily v
 ```
 
 ```r
-100*sum(!is.na(datmis$X)&!is.na(datmis$Y)&!is.na(datmis$Z))/nrow(datmis)
+100 * sum(!is.na(datmis$X) & !is.na(datmis$Y) & !is.na(datmis$Z))/nrow(datmis)
 ```
 
 ```
