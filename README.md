@@ -28,7 +28,7 @@ install_github("moreno-betancur/mice")
 Loading and looking at example dataset
 --------------------------------------
 
-([click here if you see raw rather than compiled LaTeX formulas below](https://raw.githack.com/moreno-betancur/NARFCS/master/README.html))
+([click here if you see some raw rather than compiled LaTeX formulas below](https://raw.githack.com/moreno-betancur/NARFCS/master/README.html))
 
 To illustrate, we use a simulated dataset `datmis` (available for download [here](https://rawgit.com/moreno-betancur/NARFCS/master/datmis.csv)) which consists of:
 
