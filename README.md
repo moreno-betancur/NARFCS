@@ -298,7 +298,7 @@ pSens
 ```
 
 ```r
-# NARFCS analysis using matrix syntax
+#NARFCS analysis using matrix syntax
 impNARFCS<-mice(datmis,m=5, method=c("logregSens","normSens",""), predictorMatrix=predMatrix,
                  predictorSens=predSens, parmSens=pSens, seed=234235,print=F)
 
@@ -331,7 +331,7 @@ These names highlight that, contrary to the terms in `predictorMatrix`, the term
 With the formula syntax, the analysis is performed as follows:
 
 ```r
-# NARFCS analysis using formula syntax
+#NARFCS analysis using formula syntax
 impNARFCS<-mice(datmis,m=5, method=c("logregSens","normSens",""),  form=c("~1+Y+Z","~1+X+Z",""),
                   formSens=c("~1","~1+Z",""), parmSens=pSens, seed=234235,print=F)
 

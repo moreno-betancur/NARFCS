@@ -255,7 +255,7 @@ pSens</code></pre></div>
 ## $Z
 ## $Z[[1]]
 ## [1] &quot;&quot;</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># NARFCS analysis using matrix syntax</span>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co">#NARFCS analysis using matrix syntax</span>
 impNARFCS&lt;-<span class="kw">mice</span>(datmis,<span class="dt">m=</span><span class="dv">5</span>, <span class="dt">method=</span><span class="kw">c</span>(<span class="st">&quot;logregSens&quot;</span>,<span class="st">&quot;normSens&quot;</span>,<span class="st">&quot;&quot;</span>), <span class="dt">predictorMatrix=</span>predMatrix,
                  <span class="dt">predictorSens=</span>predSens, <span class="dt">parmSens=</span>pSens, <span class="dt">seed=</span><span class="dv">234235</span>,<span class="dt">print=</span>F)
 
@@ -275,7 +275,7 @@ impNARFCS&lt;-<span class="kw">mice</span>(datmis,<span class="dt">m=</span><spa
 <div id="formula-syntax-for-narfcs" class="section level4">
 <h4>Formula syntax for NARFCS</h4>
 <p>With the formula syntax, the analysis is performed as follows:</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># NARFCS analysis using formula syntax</span>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co">#NARFCS analysis using formula syntax</span>
 impNARFCS&lt;-<span class="kw">mice</span>(datmis,<span class="dt">m=</span><span class="dv">5</span>, <span class="dt">method=</span><span class="kw">c</span>(<span class="st">&quot;logregSens&quot;</span>,<span class="st">&quot;normSens&quot;</span>,<span class="st">&quot;&quot;</span>),  <span class="dt">form=</span><span class="kw">c</span>(<span class="st">&quot;~1+Y+Z&quot;</span>,<span class="st">&quot;~1+X+Z&quot;</span>,<span class="st">&quot;&quot;</span>),
                   <span class="dt">formSens=</span><span class="kw">c</span>(<span class="st">&quot;~1&quot;</span>,<span class="st">&quot;~1+Z&quot;</span>,<span class="st">&quot;&quot;</span>), <span class="dt">parmSens=</span>pSens, <span class="dt">seed=</span><span class="dv">234235</span>,<span class="dt">print=</span>F)
 
